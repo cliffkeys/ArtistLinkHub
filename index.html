@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Artist Portfolio Manager</title>
+    <!-- Load Tailwind CSS --><script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Font Awesome for Social Media Icons --><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <!-- Load QR Code Library --><script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <style>
+        /* Custom styles for a dark, artistic theme */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d0d0d;
+        }
+        .link-button {
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.5);
+        }
+        .link-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3), 0 4px 6px -4px rgba(16, 185, 129, 0.2);
+        }
+        .qr-card-shadow {
+             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.7), 0 10px 10px -5px rgba(0, 0, 0, 0.5);
+        }
+        /* Digital Card Specific Styles (Screen Only) */
+        .atm-card {
+            width: 320px; /* Standard card width */
+            height: 200px; /* Standard card height */
+            aspect-ratio: 1.6 / 1;
+            border-radius: 15px;
+            background: linear-gradient(135deg, #1f2937, #374151);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+        }
+        .artist-name-on-card {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #34d399;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            line-height: 1;
+            margin-top: 5px;
+        }
+        
+        /* === PRINT-SPECIFIC STYLES === */
+        @media print {
+            body {
+                background: white !important;
+                color: black !important;
+            }
+            /* Hide everything except the card content */
+            #app-container > div:not(#portfolio-view) {
+                display: none !important;
+            }
+            #portfolio-view, #card-content {
+                display: block !important;
+                padding: 0 !important;
+                margin: 0 auto !important;
+                max-width: 100% !important;
+                background: white !important;
+                box-shadow: none !important;
+            }
+            /* Hide all UI elements within the portfolio view */
+            #portfolio-toggles, #links-content .text-center, #back-to-list-btn, #card-view .text-center {
+                display: none !important;
+            }
+
+            /* Style the actual card for printing */
+            .atm-card {
+                /* Standard Business Card Size (approx 3.5in x 2in) */
+                width: 90mm; 
+                height: 55mm;
+                /* Reset visual flair for clean print */
+                background: white !important;
+                border: 1px solid #333 !important;
+                box-shadow: none !important;
+                border-radius: 5px !important;
+                color: black !important;
+                
+                /* Center on the printed page */
+                margin: 50px auto !important; 
+            }
+            .artist-name-on-card {
+                color: #10b981 !important; /* Force a dark color for printing */
+                text-shadow: none !important;
+            }
+            /* Ensure images and QR code print clearly */
+            #artist-photo-card {
+                border-color: #10b981 !important;
+            }
+            #qrcode-container {
+                border-color: #999 !important;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-start py-8 px-4 text-white">
+
+    <!-- Firebase Imports and Initialization (Module Script) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection, query, deleteDoc, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // =========================================================================================
+        // FIREBASE INITIALIZATION AND CONFIGURATION
+        // -----------------------------------------------------------------------------------------
+        
+        // Use global variables provided by the Canvas environment, falling back to dummy values if running locally.
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+          // Placeholder config. You MUST replace these with YOUR Firebase project's config keys 
+          // when running outside of the Canvas environment.
+          apiKey: "YOUR_API_KEY", 
+          authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+          projectId: "YOUR_PROJECT_ID",
+          storageBucket: "YOUR_PROJECT_ID.appspot.com",
+          messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+          appId: "YOUR_APP_ID"
+        };
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; 
+
+        // =========================================================================================
+
+        let app;
+        let db;
+        let auth;
+        
+        // Expose globals for other scripts
+        window.db = null;
+        window.artistsData = {};
+        window.appId = appId;
+        window.doc = doc;
+        window.setDoc = setDoc;
+        window.deleteDoc = deleteDoc;
+
+        setLogLevel('Debug');
+        let initialLoadCompleted = false;
+
+        /**
+         * Generates the correct Firestore path for the public artist collection.
+         * Using /artifacts/{appId}/public/data/{collection} for public data access.
+         */
+        function getArtistsCollectionRef() {
+             return collection(db, 'artifacts', appId, 'public', 'data', 'artists');
+        }
+
+        /**
+         * Generates the correct Firestore document path for an artist.
+         */
+        function getArtistDocRef(artistId) {
+            return doc(db, 'artifacts', appId, 'public', 'data', 'artists', artistId);
+        }
+
+        function hideLoading(error = null) {
+            const loadingMessage = document.getElementById('loading-message');
+            loadingMessage.classList.add('hidden');
+            if (error) {
+                loadingMessage.classList.remove('hidden');
+                loadingMessage.innerHTML = `<span class="text-red-500 font-bold">ERROR:</span> ${error}`;
+            }
+        }
+
+        async function initFirebase() {
+            try {
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                window.db = db; // Expose DB for use in the app logic
+
+                // 1. Authenticate - Use custom token if available, otherwise sign in anonymously
+                if (initialAuthToken && typeof __initial_auth_token !== 'undefined') {
+                    await signInWithCustomToken(auth, initialAuthToken);
+                    console.log("Firebase initialized and authenticated with custom token.");
+                } else {
+                    await signInAnonymously(auth);
+                    console.log("Firebase initialized and authenticated anonymously (default for public deploy).");
+                }
+                
+                // 2. Set up real-time listener
+                setupDataListener();
+
+            } catch (error) {
+                console.error("Critical Error initializing Firebase:", error);
+                // CRITICAL: Ensure the UI is unblocked even on failure
+                hideLoading(`Failed to connect to backend. Please check console for details. (Error: ${error.code || error.message})`);
+                // Fallback to showing default content if connection fails
+                window.checkUrlForArtist(true);
+            }
+        }
+
+        /**
+         * Sets up real-time listener for the public artist collection.
+         */
+        function setupDataListener() {
+            // Using the new path for security rules compliance
+            const artistsCollectionRef = getArtistsCollectionRef(); 
+            const q = query(artistsCollectionRef);
+
+            onSnapshot(q, (snapshot) => {
+                snapshot.docChanges().forEach((change) => {
+                    const artist = { id: change.doc.id, ...change.doc.data() };
+                    if (change.type === "added" || change.type === "modified") {
+                        window.artistsData[artist.id] = artist;
+                    } else if (change.type === "removed") {
+                        delete window.artistsData[artist.id];
+                    }
+                });
+                
+                console.log("Updated artists data:", window.artistsData);
+                
+                // CRITICAL FIX: Only run the initial check once data is loaded to prevent UI block
+                if (!initialLoadCompleted) {
+                    window.checkUrlForArtist(); 
+                    initialLoadCompleted = true;
+                } else if (window.isEditMode()) {
+                    // Re-render the list view if in admin mode for real-time updates
+                    window.renderArtistList(); 
+                }
+            }, (error) => {
+                 // Handle errors attaching or maintaining the snapshot listener (e.g., security rules violation)
+                 console.error("Firestore Listener Error (Security Rules or Path Issue):", error);
+                 hideLoading(`Data access failed. Check Firebase security rules. (Error: ${error.code || error.message})`);
+                 // Fallback to showing default content if data fetch fails
+                 if (!initialLoadCompleted) {
+                     window.checkUrlForArtist(true);
+                     initialLoadCompleted = true;
+                 }
+            });
+        }
+        
+        // Start initialization on module load
+        initFirebase();
+    </script>
+    
+    <!-- Main Application Container -->
+    <div id="app-container" class="w-full max-w-4xl">
+        <div id="loading-message" class="text-center text-gray-400 p-8">
+            <i class="fas fa-spinner fa-spin mr-2"></i> Connecting to database...
+        </div>
+
+        <!-- Header: Navigation Bar (Only visible in Admin Mode) -->
+        <div id="nav-bar" class="hidden flex justify-between items-center mb-8 p-4 bg-gray-900 rounded-xl shadow-lg">
+            <h1 class="text-xl font-extrabold text-green-400">ArtistLink Hub | ADMIN</h1>
+            <div class="space-x-3">
+                <button onclick="window.showView('list')" id="list-nav-btn" class="px-4 py-1 rounded-full bg-gray-700 hover:bg-gray-600 text-sm font-semibold transition link-button">
+                    <i class="fas fa-users mr-1"></i> Artist List
+                </button>
+                <button onclick="window.showAdminEditor(null)" id="admin-nav-btn" class="px-4 py-1 rounded-full bg-green-600 hover:bg-green-700 text-sm font-semibold transition link-button">
+                    <i class="fas fa-plus-circle mr-1"></i> New Artist
+                </button>
+            </div>
+        </div>
+        
+        <!-- === 1. Artist List View (Admin Only) === -->
+        <div id="list-view" class="hidden bg-gray-800 p-8 md:p-12 rounded-xl qr-card-shadow">
+            <h2 class="text-3xl font-bold mb-6 text-center text-green-400">Managed Artists</h2>
+            <div id="artist-list-container" class="space-y-4">
+                <!-- Artist cards will be inserted here by renderArtistList() -->
+                <p class="text-center text-gray-400">Loading artist data...</p>
+            </div>
+        </div>
+
+        <!-- === 2. Public Portfolio View (Default View) === -->
+        <div id="portfolio-view" class="hidden w-full bg-gray-800 p-8 md:p-12 rounded-xl qr-card-shadow transition-all duration-300">
+            <!-- Back to List button (Only visible in Admin Mode) -->
+            <button onclick="window.showView('list')" id="back-to-list-btn" class="mb-6 px-3 py-1 text-sm rounded-full bg-gray-700 hover:bg-gray-600 transition hidden">
+                <i class="fas fa-arrow-left mr-1"></i> Back to Admin List
+            </button>
+            
+            <!-- Toggle Buttons for Portfolio/Card (Only visible if not in admin mode, or if artist is loaded) -->
+            <div id="portfolio-toggles" class="flex justify-center mb-8 space-x-4">
+                <button id="show-links-btn" onclick="window.togglePortfolioView('links')" class="px-6 py-2 rounded-full bg-green-600 hover:bg-green-700 text-sm font-semibold transition link-button">
+                    <i class="fas fa-link mr-2"></i> Portfolio Links
+                </button>
+                <button id="show-card-btn" onclick="window.togglePortfolioView('card')" class="px-6 py-2 rounded-full bg-gray-700 hover:bg-gray-600 text-sm font-semibold transition link-button">
+                    <i class="fas fa-qrcode mr-2"></i> Digital Card
+                </button>
+            </div>
+
+            <div id="links-content">
+                       
+                <!-- Artist Header Section -->
+                <div class="text-center mb-8">
+                    <img id="artist-photo-main" class="w-28 h-28 object-cover rounded-full mx-auto mb-4 border-4 border-green-600 shadow-xl"
+                         src="https://placehold.co/150x150/10b981/ffffff?text=Loading"
+                         alt="Artist's profile photo"
+                         onerror="this.onerror=null; this.src='https://placehold.co/150x150/10b981/ffffff?text=ARTIST+PHOTO'">
+                    
+                    <h1 id="artist-name-main" class="text-4xl font-extrabold text-green-400">Artist Name</h1>
+                    <p id="artist-title-main" class="text-lg text-gray-400 mt-1">Title/Tagline</p>
+                </div>
+
+                <!-- Bio Section -->
+                <div class="mb-10 text-center">
+                    <h2 class="text-xl font-bold mb-3 border-b border-gray-700 pb-2">Biography</h2>
+                    <p id="artist-bio-text" class="text-gray-300 leading-relaxed italic">Loading biography...</p>
+                </div>
+
+                <!-- Links Section -->
+                <div>
+                    <h2 class="text-xl font-bold mb-4 text-center border-b border-gray-700 pb-2">Listen & Connect</h2>
+                    <div id="artist-links-container" class="space-y-4">
+                        <!-- Links populated dynamically -->
+                    </div>
+                </div>
+            </div>
+            
+            <div id="card-content" class="hidden">
+                <div id="card-view" class="bg-white p-6 md:p-8 rounded-xl qr-card-shadow transition-all duration-300 text-gray-800">
+                    <div class="text-center mb-6">
+                        <h2 class="text-2xl font-bold text-gray-800">The Digital Card</h2>
+                        <p class="text-sm text-gray-500">Scan to go straight to the portfolio links.</p>
+                    </div>
+                    
+                    <div class="atm-card mx-auto relative">
+                        <div class="flex flex-col items-center justify-center h-full w-1/2">
+                            <img id="artist-photo-card" class="w-28 h-28 object-cover rounded-full mb-2 border-2 border-green-400 shadow-lg"
+                                 src="https://placehold.co/150x150/10b981/ffffff?text=Loading"
+                                 alt="Artist's card profile photo">
+                            
+                            <h3 id="artist-name-card" class="artist-name-on-card">Artist Name</h3>
+                        </div>
+                        
+                        <!-- Right side: QR Code -->
+                        <div class="flex items-center justify-center h-full w-1/2">
+                            <div id="qrcode-container" class="p-2 bg-white rounded-lg border border-gray-300 shadow-inner">
+                                <div id="qrcode-canvas"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <p class="text-center text-xs text-gray-400 mt-6">
+                        *The QR code links to the current artist's page.
+                    </p>
+                </div>
+                <!-- Print Button -->
+                <div class="flex justify-center mt-6">
+                    <button onclick="window.printCard()" class="px-6 py-3 rounded-full bg-blue-600 hover:bg-blue-700 text-lg font-semibold transition link-button">
+                        <i class="fas fa-print mr-2"></i> Print Card
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- === 3. Admin/Editor View (Admin Only) === -->
+        <div id="admin-view" class="hidden bg-gray-800 p-8 md:p-12 rounded-xl qr-card-shadow">
+            <button onclick="window.showView('list')" class="mb-6 px-3 py-1 text-sm rounded-full bg-gray-700 hover:bg-gray-600 transition">
+                <i class="fas fa-arrow-left mr-1"></i> Back to List
+            </button>
+            
+            <!-- Global Deployment Settings for QR Code -->
+            <div class="mb-8 p-6 bg-gray-900 rounded-xl border border-green-600/50">
+                <h3 class="text-xl font-bold mb-3 text-green-400">Global Deployment Settings</h3>
+                <label for="public-base-url" class="block text-sm font-medium text-gray-300">Public Domain URL (REQUIRED for scannable QR Code)</label>
+                <input type="url" id="public-base-url" 
+                       class="mt-1 block w-full rounded-md p-3 bg-gray-700 border-gray-600 text-white shadow-sm"
+                       placeholder="e.g., https://yourbrand.netlify.app/"
+                       onchange="window.saveBaseUrl(this.value)">
+                <p class="text-xs text-gray-400 mt-2">
+                    Enter the full, final URL where this application will be hosted (e.g., your Netlify address). This makes the QR code permanently scannable.
+                </p>
+            </div>
+            <!-- END GLOBAL SETTINGS -->
+
+            <h2 id="admin-title" class="text-3xl font-bold mb-8 text-green-400">Create New Artist</h2>
+            
+            <!-- Message Box for Save Feedback -->
+            <div id="form-message" class="hidden p-4 rounded-md mb-6 transition-all duration-300"></div>
+
+            <form id="artist-form" class="space-y-6">
+                <input type="hidden" id="artist-id">
+
+                <!-- Basic Info -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="artist-name-input" class="block text-sm font-medium text-gray-300">Artist Name</label>
+                        <input type="text" id="artist-name-input" required class="mt-1 block w-full rounded-md p-3 bg-gray-700 border-gray-600 text-white shadow-sm">
+                    </div>
+                    <div>
+                        <label for="artist-title-input" class="block text-sm font-medium text-gray-300">Title/Tagline</label>
+                        <input type="text" id="artist-title-input" class="mt-1 block w-full rounded-md p-3 bg-gray-700 border-gray-600 text-white shadow-sm" placeholder="e.g., Music Artist, Storyteller">
+                    </div>
+                </div>
+
+                <!-- Image Upload -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">Profile Image (Resized for Database)</label>
+                    <div class="flex items-center space-x-4">
+                        <img id="preview-image" src="https://placehold.co/100x100/374151/ffffff?text=NO+IMAGE" class="w-24 h-24 object-cover rounded-full border-2 border-green-600">
+                        <input type="file" id="image-upload" accept="image/*" class="text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-600 file:text-white hover:file:bg-green-700">
+                        <button type="button" onclick="clearImage()" class="text-red-400 hover:text-red-500 transition"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                    <input type="hidden" id="base64-image">
+                </div>
+                
+                <!-- Biography -->
+                <div>
+                    <label for="artist-bio-input" class="block text-sm font-medium text-gray-300">Biography</label>
+                    <textarea id="artist-bio-input" rows="4" required class="mt-1 block w-full rounded-md p-3 bg-gray-700 border-gray-600 text-white shadow-sm"></textarea>
+                </div>
+
+                <!-- Links Management -->
+                <div>
+                    <h3 class="text-xl font-bold mb-3 border-b border-gray-700 pb-2">Links</h3>
+                    <div id="links-editor-container" class="space-y-4 p-4 bg-gray-700 rounded-lg">
+                        <!-- Link inputs will be generated here -->
+                    </div>
+                    <button type="button" onclick="addLinkField()" class="mt-4 px-4 py-2 bg-green-600 hover:bg-green-700 rounded-md text-sm font-semibold link-button">
+                        <i class="fas fa-plus mr-1"></i> Add Link
+                    </button>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="pt-4 flex justify-between">
+                    <button type="submit" class="px-6 py-3 bg-green-600 hover:bg-green-700 rounded-lg text-lg font-bold link-button" id="save-button">
+                        <i class="fas fa-save mr-2"></i> Save Profile
+                    </button>
+                    <button type="button" onclick="window.deleteCurrentArtist()" id="delete-button" class="px-6 py-3 bg-red-600 hover:bg-red-700 rounded-lg text-lg font-bold link-button hidden">
+                        <i class="fas fa-trash-alt mr-2"></i> Delete Profile
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Application Script (Standard Script) -->
+    <script>
+        // --- Global State and Data Structures ---
+        
+        let currentArtistId = null; 
+        let qrcodeInstance = null;
+        
+        // Configuration Key for LocalStorage
+        const STORAGE_KEY_BASE_URL = 'artistLinkHubBaseUrl';
+
+        // CADEAM Default Data (Fallback if database is empty)
+        const defaultArtist = {
+            name: "CADEAM",
+            title: "Music Artist, Storyteller",
+            bio: "Cadeam is a rising music artist known for blending emotion, rhythm, and raw storytelling into every track. With a unique sound that cuts across genres, Cadeam brings authenticity and passion to every performance. From early beginnings to a growing fanbase, Cadeam continues to push creative boundaries and connect with listeners around the world.",
+            image: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNTAiIGhlaWdodD0iMTUwIiB2aWV3Qm94PSIwIDAgMTUwIDE1MCI+PHJlY3Qgd2lkdGg9IjE1MCIgaGVpZ2h0PSIxNTAiIGZpbGw9IiMxMGI5ODEiLz48dGV4dCB4PSI3NSIgeT0iNzUiIGZontCgRkZzPSIyMCIgZmlsbD0iI2ZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgYWxpZ25tZW50LWJhc2VsaW5lPSJjZW50cmFsIj5DQURFQU08L3RleHQ+PC9zdmc+",
+            links: [
+                { platform: 'Spotify', url: 'https://open.spotify.com/artist/5OS4GkG0tx2UtAOVZy1a7Y?si=nD4L7R8YQyK5c_gaj2KfTA', icon: 'fab fa-spotify', color: 'bg-green-600' },
+                { platform: 'Apple Music', url: 'https://music.apple.com/ng/artist/cadeam/1749392029', icon: 'fab fa-apple', color: 'bg-gray-700' },
+                { platform: 'Audiomack', url: 'https://audiomack.com/cadeam_', icon: 'fas fa-headphones', color: 'bg-orange-500' },
+                { platform: 'YouTube', url: 'https://youtube.com/@iamcadeam?si=TgRXhFigRud4Ei6', icon: 'fab fa-youtube', color: 'bg-red-600' },
+                { platform: 'Instagram', url: 'https://www.instagram.com/cadeam_?igsh=MW4xNWJueDFnNHZpcA%3D%3D&utm_source=qr', icon: 'fab fa-instagram', color: 'bg-pink-600' },
+                { platform: 'TikTok', url: 'https://www.tiktok.com/@cadeam_?_t=ZS-90jxlFgCY7u&_r=1', icon: 'fab fa-tiktok', color: 'bg-black' },
+                { platform: 'Facebook', url: 'https://www.facebook.com/share/1Cj98seHKH/?mibextid=wwXIfr', icon: 'fab fa-facebook', color: 'bg-blue-700' },
+                { platform: 'Snapchat', url: 'https://snapchat.com/t/BKCSOgS1', icon: 'fab fa-snapchat', color: 'bg-yellow-400' },
+            ],
+            isDefault: true // Marker for the fallback data
+        };
+
+        // --- Global Configuration Management (using localStorage for convenience) ---
+
+        /**
+         * Loads the Public Domain URL from localStorage and populates the input.
+         * @returns {string} The saved URL or an empty string.
+         */
+        window.loadBaseUrl = function() {
+            const savedUrl = localStorage.getItem(STORAGE_KEY_BASE_URL) || '';
+            const input = document.getElementById('public-base-url');
+            if (input) {
+                input.value = savedUrl;
+            }
+            return savedUrl;
+        }
+
+        /**
+         * Saves the Public Domain URL to localStorage.
+         * @param {string} url - The URL to save.
+         */
+        window.saveBaseUrl = function(url) {
+            const trimmedUrl = url.trim().replace(/\/+$/, ''); // Trim whitespace and trailing slashes
+            localStorage.setItem(STORAGE_KEY_BASE_URL, trimmedUrl);
+            showFormMessage("Public Domain URL updated. This will be used for all QR codes.", "success");
+            
+            // Re-initialize QR code if we are currently on the card view
+            if (document.getElementById('card-content').classList.contains('hidden') === false) {
+                 initializeQRCode(window.currentArtistId);
+            }
+        }
+
+        /**
+         * Checks if the user is in Admin/Edit mode based on the URL query parameter.
+         * @returns {boolean}
+         */
+        window.isEditMode = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('admin') === 'true'; 
+        }
+
+        /**
+         * FIX: Safely handles setting the URL hash by logging the intended URL.
+         * This prevents the "Access to 'blob:...' from script denied" error in iframes.
+         * @param {string} hashValue - The value to set as the URL hash (e.g., 'artistId').
+         */
+        function safeSetHash(hashValue) {
+             const baseUrl = window.location.href.split('#')[0].split('?')[0];
+             const fullUrl = hashValue ? `${baseUrl}#${hashValue}` : baseUrl;
+             console.log(`https://dictionary.cambridge.org/dictionary/english/update Intended Public Portfolio URL: ${fullUrl}`);
+             // In a normal deployed browser environment, you would use: window.location.hash = hashValue;
+             // But we avoid it here to prevent console errors in the preview.
+        }
+
+        /**
+         * Hides the loading message and shows the main app container.
+         * @param {boolean} showDefaultView - Whether to immediately proceed to showing content.
+         */
+        function hideLoading() {
+            document.getElementById('loading-message').classList.add('hidden');
+        }
+        
+        // --- Utility Functions ---
+
+        /**
+         * Resizes and compresses an image file into a Base64 string for database storage.
+         */
+        function resizeImageAndConvert(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+                        const MAX_SIZE = 300; // Max width or height in pixels
+
+                        if (width > height) {
+                            if (width > MAX_SIZE) {
+                                height *= MAX_SIZE / width;
+                                width = MAX_SIZE;
+                            }
+                        } else {
+                            if (height > MAX_SIZE) {
+                                width *= MAX_SIZE / height;
+                                height = MAX_SIZE;
+                            }
+                        }
+                        
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        // Convert to JPEG with medium quality (0.7) for compression
+                        const resizedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                        resolve(resizedBase64);
+                    };
+                    img.onerror = reject;
+                    img.src = event.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        /**
+         * Displays a temporary message in the admin form feedback area.
+         */
+        function showFormMessage(message, type = 'success') {
+            const msgBox = document.getElementById('form-message');
+            msgBox.textContent = message;
+            msgBox.classList.remove('hidden', 'bg-red-900/50', 'bg-green-900/50', 'border', 'border-red-600', 'border-green-600', 'text-red-300', 'text-green-300', 'bg-gray-700', 'border-gray-500', 'text-gray-300');
+            
+            if (type === 'success') {
+                msgBox.classList.add('bg-green-900/50', 'border', 'border-green-600', 'text-green-300');
+            } else if (type === 'error') {
+                msgBox.classList.add('bg-red-900/50', 'border', 'border-red-600', 'text-red-300');
+            } else if (type === 'saving') {
+                 msgBox.classList.add('bg-gray-700', 'border', 'border-gray-500', 'text-gray-300');
+            }
+            
+            setTimeout(() => {
+                msgBox.classList.add('hidden');
+            }, 5000);
+        }
+        
+        /**
+         * Triggers the print dialog.
+         */
+        window.printCard = function() {
+            window.print();
+        }
+
+        // --- View Management ---
+
+        /**
+         * Switches the main application view.
+         * @param {string} viewId - 'list', 'portfolio', or 'admin'
+         */
+        window.showView = function(viewId) {
+            
+            const isEditing = window.isEditMode();
+
+            // Load the base URL config every time the admin view is shown
+            if (viewId === 'admin') {
+                window.loadBaseUrl();
+            }
+
+            // Toggle visibility of Admin controls
+            if (isEditing) {
+                document.getElementById('nav-bar').classList.remove('hidden');
+                document.getElementById('back-to-list-btn').classList.toggle('hidden', viewId !== 'portfolio');
+            } else {
+                document.getElementById('nav-bar').classList.add('hidden');
+                document.getElementById('back-to-list-btn').classList.add('hidden');
+            }
+
+            ['list-view', 'portfolio-view', 'admin-view'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+
+            document.getElementById(viewId + '-view').classList.remove('hidden');
+        }
+
+        /**
+         * Determines which profile to load and which view to show (Admin or Public).
+         * @param {boolean} forceDefault - If true, ignores DB data and forces the default artist (used on DB connection failure).
+         */
+        window.checkUrlForArtist = function(forceDefault = false) {
+            hideLoading(); // CRITICAL: Hide loading message when this is called
+
+            let artistId = window.location.hash.substring(1);
+            let targetArtist = null;
+            
+            const artistIds = Object.keys(window.artistsData);
+
+            if (forceDefault || artistIds.length === 0) {
+                // No DB data or forced failure, use the hardcoded default
+                targetArtist = {...defaultArtist, id: 'default-cadeam'};
+            } else if (artistId && window.artistsData[artistId]) {
+                // A specific, valid artist is in the URL hash
+                targetArtist = window.artistsData[artistId];
+            } else if (artistIds.length > 0) {
+                // No valid hash, find the newest one in the DB to show as default
+                artistIds.sort((a, b) => window.artistsData[b].timestamp - window.artistsData[a].timestamp);
+                targetArtist = window.artistsData[artistIds[0]];
+            } else {
+                // Fallback to the default if no data is present at all
+                targetArtist = {...defaultArtist, id: 'default-cadeam'};
+            }
+
+            if (window.isEditMode()) {
+                // ADMIN MODE: Show the list first
+                window.renderArtistList();
+                window.showView('list');
+            } else {
+                // PUBLIC MODE: Load the resolved portfolio and show it
+                window.loadArtistProfile(targetArtist);
+                window.showView('portfolio');
+            }
+        }
+        
+        // --- Admin/Editor Functions ---
+
+        /**
+         * Loads the Admin editor form, either empty for a new artist, or populated for editing.
+         * @param {object | null} artist - The artist object to edit, or null for new.
+         */
+        window.showAdminEditor = function(artist) {
+            if (!window.isEditMode()) {
+                // In a public deployment, you might redirect to a login page or display a login prompt here
+                console.error("Unauthorized access attempt to admin editor. Must be in ?admin=true mode.");
+                return;
+            }
+
+            window.showView('admin');
+            showFormMessage('', 'clear'); 
+            const form = document.getElementById('artist-form');
+            form.reset();
+            document.getElementById('links-editor-container').innerHTML = '';
+
+            if (artist) {
+                window.currentArtistId = artist.id;
+                document.getElementById('admin-title').textContent = `Edit Artist: ${artist.name}`;
+                document.getElementById('artist-id').value = artist.id;
+                document.getElementById('artist-name-input').value = artist.name || '';
+                document.getElementById('artist-title-input').value = artist.title || '';
+                document.getElementById('artist-bio-input').value = artist.bio || '';
+                document.getElementById('base64-image').value = artist.image || '';
+                document.getElementById('preview-image').src = artist.image || 'https://placehold.co/100x100/374151/ffffff?text=NO+IMAGE';
+                document.getElementById('delete-button').classList.remove('hidden');
+
+                (artist.links || []).forEach(link => addLinkField(link.platform, link.url));
+
+            } else {
+                window.currentArtistId = null;
+                document.getElementById('admin-title').textContent = 'Create New Artist';
+                document.getElementById('artist-id').value = '';
+                document.getElementById('delete-button').classList.add('hidden');
+                
+                // If starting a new profile and the database is empty, load CADEAM defaults
+                if (Object.keys(window.artistsData).length === 0) {
+                    document.getElementById('artist-name-input').value = defaultArtist.name;
+                    document.getElementById('artist-title-input').value = defaultArtist.title;
+                    document.getElementById('artist-bio-input').value = defaultArtist.bio;
+                    document.getElementById('base64-image').value = defaultArtist.image;
+                    document.getElementById('preview-image').src = defaultArtist.image;
+                    defaultArtist.links.forEach(link => addLinkField(link.platform, link.url));
+                } else {
+                    addLinkField('', '');
+                }
+            }
+            // Ensure the base URL is loaded when the admin view is shown
+            window.loadBaseUrl();
+        }
+
+        /**
+         * Dynamically adds a link field to the Admin form.
+         */
+        window.addLinkField = function(platform = '', url = '') {
+            const container = document.getElementById('links-editor-container');
+            const newLink = document.createElement('div');
+            newLink.className = 'flex space-x-2 items-center';
+            newLink.innerHTML = `
+                <input type="text" value="${platform}" placeholder="Platform (e.g., Spotify, Instagram)" required class="flex-1 rounded-md p-2 bg-gray-600 border-gray-500 text-white shadow-sm link-platform">
+                <input type="url" value="${url}" placeholder="URL (e.g., https://spotify.com/...)" required class="flex-2 w-full rounded-md p-2 bg-gray-600 border-gray-500 text-white shadow-sm link-url">
+                <button type="button" onclick="this.parentNode.remove()" class="px-3 py-1 bg-red-500 hover:bg-red-600 rounded-md text-white transition"><i class="fas fa-minus"></i></button>
+            `;
+            container.appendChild(newLink);
+        }
+
+        // Image to Base64 conversion and preview
+        document.getElementById('image-upload').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                try {
+                    const base64String = await resizeImageAndConvert(file);
+                    document.getElementById('base64-image').value = base64String;
+                    document.getElementById('preview-image').src = base64String;
+                    showFormMessage("Image resized and ready to save. File size is now optimized.", "success");
+                } catch (error) {
+                    console.error("Image processing failed:", error);
+                    showFormMessage("Error processing image. Please try a different file.", "error");
+                }
+            }
+        });
+
+        window.clearImage = function() {
+            document.getElementById('image-upload').value = '';
+            document.getElementById('base64-image').value = '';
+            document.getElementById('preview-image').src = 'https://placehold.co/100x100/374151/ffffff?text=NO+IMAGE';
+            showFormMessage("Image cleared.", "success");
+        }
+
+        // Handle Form Submission (Save Artist to Firestore)
+        document.getElementById('artist-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            document.getElementById('save-button').disabled = true;
+            showFormMessage("Saving profile...", "saving");
+
+            const artistId = document.getElementById('artist-id').value || window.crypto.randomUUID();
+            const links = [];
+            document.querySelectorAll('#links-editor-container > div').forEach(linkDiv => {
+                const platform = linkDiv.querySelector('.link-platform').value.trim();
+                const url = linkDiv.querySelector('.link-url').value.trim();
+                
+                let icon = 'fas fa-link';
+                let color = 'bg-gray-700';
+                
+                const lowerPlatform = platform.toLowerCase();
+                if (lowerPlatform.includes('spotify')) { icon = 'fab fa-spotify'; color = 'bg-green-600'; }
+                else if (lowerPlatform.includes('apple') || lowerPlatform.includes('music')) { icon = 'fab fa-apple'; color = 'bg-gray-700'; }
+                else if (lowerPlatform.includes('audiomack')) { icon = 'fas fa-headphones'; color = 'bg-orange-500'; }
+                else if (lowerPlatform.includes('youtube')) { icon = 'fab fa-youtube'; color = 'bg-red-600'; }
+                else if (lowerPlatform.includes('instagram')) { icon = 'fab fa-instagram'; color = 'bg-pink-600'; }
+                else if (lowerPlatform.includes('tiktok')) { icon = 'fab fa-tiktok'; color = 'bg-black'; }
+                else if (lowerPlatform.includes('facebook')) { icon = 'fab fa-facebook'; color = 'bg-blue-700'; }
+                else if (lowerPlatform.includes('snapchat')) { icon = 'fab fa-snapchat'; color = 'bg-yellow-400'; }
+                
+                if (platform && url) {
+                    links.push({ platform, url, icon, color });
+                }
+            });
+
+            const artistData = {
+                name: document.getElementById('artist-name-input').value.trim(),
+                title: document.getElementById('artist-title-input').value.trim(),
+                bio: document.getElementById('artist-bio-input').value.trim(),
+                image: document.getElementById('base64-image').value,
+                links: links,
+                timestamp: Date.now(),
+            };
+
+            if (!artistData.name || !artistData.bio) {
+                document.getElementById('save-button').disabled = false;
+                showFormMessage("Validation Error: Artist Name and Bio are required.", "error");
+                return;
+            }
+
+            try {
+                // Use the approved artifact path for public data
+                const docRef = window.getArtistDocRef(artistId); 
+                await window.setDoc(docRef, artistData);
+                
+                console.log("Artist profile saved/updated successfully:", artistId);
+                showFormMessage(`Profile for ${artistData.name} saved successfully!`, "success");
+                
+                if (window.isEditMode()) {
+                    setTimeout(() => window.showView('list'), 1500);
+                }
+
+            } catch (error) {
+                console.error("Error saving artist profile:", error);
+                showFormMessage(`Failed to save profile. Error: ${error.message}. Did you update your Firebase security rules?`, "error");
+            } finally {
+                document.getElementById('save-button').disabled = false;
+            }
+        });
+
+        window.deleteCurrentArtist = async function() {
+            if (!window.currentArtistId || !window.isEditMode()) return;
+
+            // Use a custom confirmation dialog or UI element instead of window.confirm()
+            const isConfirmed = confirm('Are you absolutely sure you want to delete this artist? This action cannot be undone.');
+            if (isConfirmed) {
+                 try {
+                    // Use the approved artifact path for public data
+                    const docRef = window.getArtistDocRef(window.currentArtistId);
+                    await window.deleteDoc(docRef);
+                    console.log("Artist profile deleted successfully:", window.currentArtistId);
+                    window.currentArtistId = null;
+                    
+                    if (Object.keys(window.artistsData).length === 0) {
+                        safeSetHash(''); // Use safe hash setter
+                        window.checkUrlForArtist(); 
+                    } else {
+                        window.showView('list');
+                        safeSetHash(''); // Use safe hash setter
+                    }
+
+                } catch (error) {
+                    console.error("Error deleting artist profile:", error);
+                }
+            }
+        }
+        
+        // --- Artist List Functions ---
+
+        /**
+         * Renders the list of artists currently in the local artistsData map.
+         */
+        window.renderArtistList = function() {
+            if (!window.isEditMode()) return; 
+
+            const container = document.getElementById('artist-list-container');
+            container.innerHTML = '';
+            
+            const artistIds = Object.keys(window.artistsData);
+
+            if (artistIds.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-400 p-8">No artists found. Click \'New Artist\' to add one!</p>';
+                return;
+            }
+
+            artistIds.sort((a, b) => window.artistsData[b].timestamp - window.artistsData[a].timestamp);
+
+            artistIds.forEach(id => {
+                const artist = window.artistsData[id];
+                const artistCard = document.createElement('div');
+                artistCard.className = 'flex flex-col sm:flex-row items-center justify-between p-4 bg-gray-700 rounded-lg shadow-md hover:bg-gray-600 transition';
+                artistCard.innerHTML = `
+                    <div class="flex items-center space-x-4 mb-2 sm:mb-0 w-full sm:w-auto">
+                        <img src="${artist.image || 'https://placehold.co/50x50/374151/ffffff?text=A'}" class="w-12 h-12 object-cover rounded-full border-2 border-green-500">
+                        <div>
+                            <p class="text-lg font-semibold text-white">${artist.name}</p>
+                            <p class="text-sm text-gray-400">${artist.title || 'Profile'}</p>
+                        </div>
+                    </div>
+                    <div class="space-x-2 mt-2 sm:mt-0">
+                        <button onclick="window.loadArtistProfile(window.artistsData['${id}'])" class="px-3 py-1 text-sm rounded-full bg-green-600 hover:bg-green-700 transition"><i class="fas fa-eye"></i> View</button>
+                        <button onclick="window.showAdminEditor(window.artistsData['${id}'])" class="px-3 py-1 text-sm rounded-full bg-blue-600 hover:bg-blue-700 transition"><i class="fas fa-edit"></i> Edit</button>
+                    </div>
+                `;
+                container.appendChild(artistCard);
+            });
+        }
+        
+        // --- Public Portfolio (Display) Functions ---
+
+        /**
+         * Loads and displays the Public Portfolio View for a specific artist.
+         * @param {object} artist - The artist data object.
+         */
+        window.loadArtistProfile = function(artist) {
+            
+            window.currentArtistId = artist.id;
+
+            // 1. Update Portfolio (Links) View
+            document.getElementById('artist-photo-main').src = artist.image;
+            document.getElementById('artist-name-main').textContent = artist.name;
+            document.getElementById('artist-title-main').textContent = artist.title;
+            document.getElementById('artist-bio-text').textContent = artist.bio;
+            
+            const linksContainer = document.getElementById('artist-links-container');
+            linksContainer.innerHTML = '';
+
+            (artist.links || []).forEach(link => {
+                const linkElement = document.createElement('a');
+                linkElement.href = link.url;
+                linkElement.target = '_blank';
+                linkElement.className = `link-button flex items-center justify-between p-4 ${link.color || 'bg-gray-700'} hover:opacity-90 rounded-lg text-lg font-bold`;
+                linkElement.innerHTML = `
+                    <span><i class="${link.icon || 'fas fa-link'} mr-4"></i> ${link.platform}</span>
+                    <i class="fas fa-chevron-right"></i>
+                `;
+                linksContainer.appendChild(linkElement);
+            });
+
+            // 2. Update Card View
+            document.getElementById('artist-photo-card').src = artist.image;
+            document.getElementById('artist-name-card').textContent = artist.name;
+            
+            // 3. Update URL Hash and QR Code
+            if (!artist.isDefault) {
+                 safeSetHash(artist.id); // FIX: Use safe hash setter
+            } else {
+                 safeSetHash(''); // FIX: Use safe hash setter
+            }
+           
+            initializeQRCode(artist.id);
+            window.togglePortfolioView('links'); // Default to links view
+        }
+        
+        /**
+         * Toggles between the Links and Card view within the Portfolio.
+         */
+        window.togglePortfolioView = function(view) {
+            const linksContent = document.getElementById('links-content');
+            const cardContent = document.getElementById('card-content');
+            const linksBtn = document.getElementById('show-links-btn');
+            const cardBtn = document.getElementById('show-card-btn');
+
+            if (view === 'links') {
+                linksContent.classList.remove('hidden');
+                cardContent.classList.add('hidden');
+                linksBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+                linksBtn.classList.remove('bg-gray-700', 'hover:bg-gray-600');
+                cardBtn.classList.add('bg-gray-700', 'hover:bg-gray-600');
+                cardBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+            } else if (view === 'card') {
+                linksContent.classList.add('hidden');
+                cardContent.classList.remove('hidden');
+                cardBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+                cardBtn.classList.remove('bg-gray-700', 'hover:bg-gray-600');
+                linksBtn.classList.add('bg-gray-700', 'hover:bg-gray-600');
+                linksBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+            }
+        }
+
+        /**
+         * Initializes the QR code generator, prioritizing the user-defined public domain.
+         */
+        function initializeQRCode(artistId) {
+            const qrCanvas = document.getElementById('qrcode-canvas');
+            
+            // FIX: Prioritize the public base URL stored by the user.
+            let publicDomain = window.loadBaseUrl().trim();
+            
+            if (!publicDomain) {
+                // FALLBACK: Use the current URL (will fail on external scan but works in preview)
+                publicDomain = window.location.href.split('#')[0].split('?')[0]; 
+                console.warn("QR Code Base URL is dynamic (using current window location). This link will likely FAIL when scanned externally. Please enter your Public Domain URL in the Admin Settings.");
+            } else {
+                 console.log("QR Code Base URL set to: " + publicDomain);
+            }
+            
+            // Ensure the domain ends with a slash for consistent hashing
+            if (!publicDomain.endsWith('/')) {
+                publicDomain += '/';
+            }
+            
+            // Construct the final link with the artist's ID as the hash
+            const qrLink = `${publicDomain}#${artistId}`;
+
+            if (qrcodeInstance) {
+                qrcodeInstance.clear();
+                qrcodeInstance.makeCode(qrLink);
+            } else {
+                qrcodeInstance = new QRCode(qrCanvas, {
+                    text: qrLink,
+                    width: 130, 
+                    height: 130,
+                    colorDark : "#000000",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.H
+                });
+            }
+        }
+        
+        // --- Initialization and Default Logic ---
+        window.addEventListener('load', () => {
+            // Handle URL changes (hash only) to load profiles
+            window.addEventListener('hashchange', window.checkUrlForArtist);
+            
+            // Initial check will be performed by the Firebase script when data is first loaded (or fails)
+        });
+        
+        // Load the base URL on initial page load
+        document.addEventListener('DOMContentLoaded', window.loadBaseUrl);
+    </script>
+</body>
+</html>
