@@ -138,10 +138,7 @@
         window.db = null;
         window.artistsData = {};
         window.appId = appId;
-        // window.doc = doc; // Not needed globally since we expose getArtistDocRef
-        // window.setDoc = setDoc; // Not needed globally since we expose setDoc globally
-        // window.deleteDoc = deleteDoc; // Not needed globally since we expose deleteDoc globally
-
+        
         setLogLevel('Debug');
         let initialLoadCompleted = false;
 
@@ -462,7 +459,7 @@
             name: "CADEAM",
             title: "Music Artist, Storyteller",
             bio: "Cadeam is a rising music artist known for blending emotion, rhythm, and raw storytelling into every track. With a unique sound that cuts across genres, Cadeam brings authenticity and passion to every performance. From early beginnings to a growing fanbase, Cadeam continues to push creative boundaries and connect with listeners around the world.",
-            image: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNTAiIGhlaWdodD0iMTUwIiB2aWV3Qm94PSIwIDAgMTUwIDE1MCI+PHJlY3Qgd2lkdGg9IjE1MCIgaGVpZ2h0PSIxNTAiIGZontCgRkZzPSIyMCIgZmlsbD0iI2ZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgYWxpZ25tZW50LWJhc2VsaW5lPSJjZW50cmFsIj5DQURFQU08L3RleHQ+PC9zdmc+",
+            image: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNTAiIGhlaWdodD0iMTUwIiB2aWV3Qm94PSIwIDAgMTUwIDE1MCI+PHJlY3Qgd2lkdGg9IjE1MCIgaGVpZ2h0PSIxNTAiIGZpbGw9IiM3MTdBMUQiLz48dGV4dCB4PSI3NSIgeT0iNzUiIHN0eWxlPSJmb250LXNpemU6IDI0cHk7IGZpbGw6ICNmZmY7IHRleHQtYW5jaG9yOiBtaWRkbGU7IGRvbWluYW50LWJhc2VsaW5lOiBjZW50cmFsOyI+Q0FERSBBTTwvdGV4dD48L3N2Zz4=",
             links: [
                 { platform: 'Spotify', url: 'https://open.spotify.com/artist/5OS4GkG0tx2UtAOVZy1a7Y?si=nD4L7R8YQyK5c_gaj2KfTA', icon: 'fab fa-spotify', color: 'bg-green-600' },
                 { platform: 'Apple Music', url: 'https://music.apple.com/ng/artist/cadeam/1749392029', icon: 'fab fa-apple', color: 'bg-gray-700' },
@@ -817,7 +814,7 @@
             }
 
             try {
-                // FIX: Now calls the globally exposed function set up in the module script
+                // FIX: This now calls the globally exposed function set up in the module script
                 const docRef = window.getArtistDocRef(artistId); 
                 await window.setArtistDoc(docRef, artistData);
                 
@@ -843,7 +840,7 @@
             const isConfirmed = confirm('Are you absolutely sure you want to delete this artist? This action cannot be undone.');
             if (isConfirmed) {
                  try {
-                    // FIX: Now calls the globally exposed function set up in the module script
+                    // FIX: This now calls the globally exposed function set up in the module script
                     const docRef = window.getArtistDocRef(window.currentArtistId);
                     await window.deleteArtistDoc(docRef);
                     console.log("Artist profile deleted successfully:", window.currentArtistId);
@@ -970,7 +967,7 @@
                 linksContent.classList.add('hidden');
                 cardContent.classList.remove('hidden');
                 cardBtn.classList.add('bg-green-600', 'hover:bg-green-700');
-                cardBtn.classList.remove('bg-gray-700', 'hover:bg-gray-600');
+                cardBtn.classList.remove('bg-gray-700', 'hover:bg-green-700');
                 linksBtn.classList.add('bg-gray-700', 'hover:bg-gray-600');
                 linksBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
             }
@@ -1002,8 +999,17 @@
             const qrLink = `${publicDomain}#${artistId}`;
 
             if (qrcodeInstance) {
-                qrcodeInstance.clear();
-                qrcodeInstance.makeCode(qrLink);
+                // Clear the existing QR code instance's drawing area
+                const children = qrCanvas.querySelectorAll('*');
+                children.forEach(child => qrCanvas.removeChild(child));
+                qrcodeInstance = new QRCode(qrCanvas, {
+                    text: qrLink,
+                    width: 130, 
+                    height: 130,
+                    colorDark : "#000000",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.H
+                });
             } else {
                 qrcodeInstance = new QRCode(qrCanvas, {
                     text: qrLink,
