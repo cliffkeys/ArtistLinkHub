@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -135,7 +136,7 @@
         let auth;
         
         // Expose globals for other scripts
-        window.db = null;
+        window.db = null; // CRITICAL: This is set to the Firestore instance later
         window.artistsData = {};
         window.appId = appId;
         
@@ -155,6 +156,10 @@
          * We EXPOSE THIS globally via the window object.
          */
         window.getArtistDocRef = function(artistId) {
+            if (!db) {
+                console.error("Firestore DB instance is not yet available.");
+                return null;
+            }
             return doc(db, 'artifacts', appId, 'public', 'data', 'artists', artistId);
         }
 
@@ -162,6 +167,7 @@
          * Expose setDoc globally.
          */
         window.setArtistDoc = async function(docRef, data) {
+            if (!docRef) throw new Error("Document reference is missing (DB not ready).");
             return await setDoc(docRef, data);
         }
 
@@ -169,6 +175,7 @@
          * Expose deleteDoc globally.
          */
         window.deleteArtistDoc = async function(docRef) {
+            if (!docRef) throw new Error("Document reference is missing (DB not ready).");
             return await deleteDoc(docRef);
         }
         
@@ -186,7 +193,7 @@
                 app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
-                window.db = db; // Expose DB for use in the app logic
+                window.db = db; // CRITICAL: Expose DB for use in the standard script logic
 
                 // 1. Authenticate - Use custom token if available, otherwise sign in anonymously
                 if (initialAuthToken && typeof __initial_auth_token !== 'undefined') {
@@ -213,7 +220,6 @@
          * Sets up real-time listener for the public artist collection.
          */
         function setupDataListener() {
-            // Using the new path for security rules compliance
             const artistsCollectionRef = getArtistsCollectionRef(); 
             const q = query(artistsCollectionRef);
 
@@ -513,21 +519,16 @@
         }
 
         /**
-         * FIX: Safely handles setting the URL hash by logging the intended URL.
-         * This prevents the "Access to 'blob:...' from script denied" error in iframes.
-         * @param {string} hashValue - The value to set as the URL hash (e.g., 'artistId').
+         * Safely handles setting the URL hash by logging the intended URL.
          */
         function safeSetHash(hashValue) {
              const baseUrl = window.location.href.split('#')[0].split('?')[0];
              const fullUrl = hashValue ? `${baseUrl}#${hashValue}` : baseUrl;
              console.log(`https://dictionary.cambridge.org/dictionary/english/update Intended Public Portfolio URL: ${fullUrl}`);
-             // In a normal deployed browser environment, you would use: window.location.hash = hashValue;
-             // But we avoid it here to prevent console errors in the preview.
         }
 
         /**
          * Hides the loading message and shows the main app container.
-         * @param {boolean} showDefaultView - Whether to immediately proceed to showing content.
          */
         function hideLoading() {
             document.getElementById('loading-message').classList.add('hidden');
@@ -610,7 +611,6 @@
 
         /**
          * Switches the main application view.
-         * @param {string} viewId - 'list', 'portfolio', or 'admin'
          */
         window.showView = function(viewId) {
             
@@ -639,7 +639,6 @@
 
         /**
          * Determines which profile to load and which view to show (Admin or Public).
-         * @param {boolean} forceDefault - If true, ignores DB data and forces the default artist (used on DB connection failure).
          */
         window.checkUrlForArtist = function(forceDefault = false) {
             hideLoading(); // CRITICAL: Hide loading message when this is called
@@ -679,11 +678,9 @@
 
         /**
          * Loads the Admin editor form, either empty for a new artist, or populated for editing.
-         * @param {object | null} artist - The artist object to edit, or null for new.
          */
         window.showAdminEditor = function(artist) {
             if (!window.isEditMode()) {
-                // In a public deployment, you might redirect to a login page or display a login prompt here
                 console.error("Unauthorized access attempt to admin editor. Must be in ?admin=true mode.");
                 return;
             }
@@ -771,7 +768,16 @@
         document.getElementById('artist-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            document.getElementById('save-button').disabled = true;
+            const saveButton = document.getElementById('save-button');
+            saveButton.disabled = true; // Immediately disable button
+            
+            // CRITICAL FIX: Check if the database instance is available
+            if (!window.db) {
+                saveButton.disabled = false;
+                showFormMessage("Database connection is not ready. Please wait for 'Connecting to database...' message to disappear.", "error");
+                return;
+            }
+
             showFormMessage("Saving profile...", "saving");
 
             const artistId = document.getElementById('artist-id').value || window.crypto.randomUUID();
@@ -808,13 +814,13 @@
             };
 
             if (!artistData.name || !artistData.bio) {
-                document.getElementById('save-button').disabled = false;
+                saveButton.disabled = false;
                 showFormMessage("Validation Error: Artist Name and Bio are required.", "error");
                 return;
             }
 
             try {
-                // FIX: This now calls the globally exposed function set up in the module script
+                // This function calls the setDoc from the module script
                 const docRef = window.getArtistDocRef(artistId); 
                 await window.setArtistDoc(docRef, artistData);
                 
@@ -829,7 +835,7 @@
                 console.error("Error saving artist profile:", error);
                 showFormMessage(`Failed to save profile. Error: ${error.message}. Did you update your Firebase security rules?`, "error");
             } finally {
-                document.getElementById('save-button').disabled = false;
+                saveButton.disabled = false;
             }
         });
 
@@ -905,7 +911,6 @@
 
         /**
          * Loads and displays the Public Portfolio View for a specific artist.
-         * @param {object} artist - The artist data object.
          */
         window.loadArtistProfile = function(artist) {
             
