@@ -141,8 +141,13 @@
 
         function load() {
             const saved = localStorage.getItem(KEY);
-            data = saved ? JSON.parse(saved) : {};
-            if (!Object.keys(data).length) data[DEFAULT.id] = DEFAULT;
+            if (saved) {
+                data = JSON.parse(saved);
+            } else {
+                data = {};
+                data[DEFAULT.id] = DEFAULT;
+                save(); // Save the default to localStorage
+            }
         }
 
         function save() {
@@ -345,14 +350,24 @@
             const ids = Object.keys(data);
             let target = null;
             
-            if (hash && data[hash]) target = data[hash];
-            else if (ids.length) {
+            // Find the target artist to display
+            if (hash && data[hash]) {
+                // If there's a hash in URL and that artist exists, show them
+                target = data[hash];
+            } else if (ids.length) {
+                // Otherwise show the most recent artist
                 ids.sort((a, b) => data[b].timestamp - data[a].timestamp);
                 target = data[ids[0]];
-            } else target = DEFAULT;
+            }
 
-            if (isAdmin()) showList();
-            else showPortfolio(target);
+            // If we have a target artist, display their portfolio or the list
+            if (target) {
+                if (isAdmin()) {
+                    showList();
+                } else {
+                    showPortfolio(target);
+                }
+            }
         }
 
         document.getElementById('img').addEventListener('change', async e => {
