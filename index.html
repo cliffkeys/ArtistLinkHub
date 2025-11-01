@@ -77,8 +77,12 @@
         <div id="editor-view" class="hidden bg-gray-800 p-8 rounded-xl qr-card-shadow">
             <button onclick="showList()" class="mb-6 px-3 py-1 rounded-full bg-gray-700 hover:bg-gray-600"><i class="fas fa-arrow-left mr-1"></i> Back</button>
             <div class="mb-6 p-4 bg-gray-900 rounded-xl border border-green-600/50">
-                <label class="block text-sm font-medium mb-2">Public URL (for QR Code)</label>
-                <input type="url" id="base-url" class="w-full rounded-md p-3 bg-gray-700 text-white" placeholder="https://yoursite.github.io" onchange="saveBaseUrl()">
+                <label class="block text-sm font-medium mb-2 text-green-400">⚠️ Public URL (REQUIRED for QR Code to work)</label>
+                <input type="url" id="base-url" class="w-full rounded-md p-3 bg-gray-700 text-white" placeholder="https://cliffkeys.github.io" onchange="saveBaseUrl()">
+                <p class="text-xs text-gray-400 mt-2">
+                    Enter your full GitHub Pages URL. Example: <code class="text-green-400">https://cliffkeys.github.io</code><br>
+                    Without this, QR codes won't work when scanned from other devices!
+                </p>
             </div>
             <h2 id="editor-title" class="text-3xl font-bold mb-8 text-green-400">Create Artist</h2>
             <div id="msg" class="hidden p-4 rounded-md mb-6"></div>
@@ -162,8 +166,16 @@
 
         function saveBaseUrl() {
             const url = document.getElementById('base-url').value.trim().replace(/\/+$/, '');
+            if (!url) {
+                showMsg("Please enter a valid URL!", "error");
+                return;
+            }
             localStorage.setItem(URL_KEY, url);
-            showMsg("URL saved", "success");
+            showMsg("✓ URL saved! QR codes will now work", "success");
+            // Refresh QR code if we're viewing a card
+            if (currentId && !document.getElementById('card-section').classList.contains('hidden')) {
+                initQR(currentId);
+            }
         }
 
         function isAdmin() {
@@ -338,10 +350,31 @@
         function initQR(id) {
             const canvas = document.getElementById('qrcode');
             canvas.innerHTML = '';
-            let base = loadBaseUrl() || window.location.href.split('#')[0].split('?')[0];
+            
+            // Get the base URL from settings
+            let base = loadBaseUrl().trim();
+            
+            // If no base URL is set, show warning
+            if (!base) {
+                canvas.innerHTML = '<div class="text-center p-4 text-red-600 text-sm">⚠️ Set Public URL in Admin Settings</div>';
+                console.warn('QR Code needs Public Domain URL. Go to Admin > Global Deployment Settings');
+                return;
+            }
+            
+            // Ensure URL ends with /
             if (!base.endsWith('/')) base += '/';
+            
+            // Create the full URL with hash for specific artist
             const url = `${base}#${id}`;
-            qr = new QRCode(canvas, { text: url, width: 130, height: 130 });
+            
+            console.log('QR Code URL:', url);
+            qr = new QRCode(canvas, { 
+                text: url, 
+                width: 130, 
+                height: 130,
+                colorDark: '#000000',
+                colorLight: '#ffffff'
+            });
         }
 
         function init() {
