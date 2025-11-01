@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artist Portfolio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0d0d0d; }
+        .link-button { transition: all 0.2s; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5); }
+        .link-button:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3); }
+        .qr-card-shadow { box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.7); }
+        .atm-card { width: 320px; height: 200px; border-radius: 15px; background: linear-gradient(135deg, #1f2937, #374151); color: white; padding: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
+        .artist-name-on-card { font-size: 1.25rem; font-weight: 700; color: #34d399; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center py-8 px-4 text-white">
+    <div id="app" class="w-full max-w-4xl">
+        <div id="nav-bar" class="hidden flex justify-between items-center mb-8 p-4 bg-gray-900 rounded-xl">
+            <h1 class="text-xl font-bold text-green-400">ArtistLink Hub | ADMIN</h1>
+            <div class="space-x-3">
+                <button onclick="showList()" class="px-4 py-1 rounded-full bg-gray-700 hover:bg-gray-600 font-semibold link-button"><i class="fas fa-users mr-1"></i> List</button>
+                <button onclick="showEditor(null)" class="px-4 py-1 rounded-full bg-green-600 hover:bg-green-700 font-semibold link-button"><i class="fas fa-plus-circle mr-1"></i> New</button>
+            </div>
+        </div>
+        
+        <div id="list-view" class="hidden bg-gray-800 p-8 rounded-xl qr-card-shadow">
+            <h2 class="text-3xl font-bold mb-6 text-center text-green-400">Managed Artists</h2>
+            <div id="artist-list"></div>
+        </div>
+
+        <div id="portfolio-view" class="hidden bg-gray-800 p-8 rounded-xl qr-card-shadow">
+            <button onclick="showList()" id="back-btn" class="hidden mb-4 px-3 py-1 text-sm rounded-full bg-gray-700 hover:bg-gray-600"><i class="fas fa-arrow-left mr-1"></i> Back</button>
+            <div class="flex justify-center mb-8 space-x-4">
+                <button onclick="showLinks()" id="links-tab" class="px-6 py-2 rounded-full bg-green-600 font-semibold link-button"><i class="fas fa-link mr-2"></i> Links</button>
+                <button onclick="showCard()" id="card-tab" class="px-6 py-2 rounded-full bg-gray-700 font-semibold link-button"><i class="fas fa-qrcode mr-2"></i> Card</button>
+            </div>
+            <div id="links-section">
+                <div class="text-center mb-8">
+                    <img id="main-photo" class="w-28 h-28 object-cover rounded-full mx-auto mb-4 border-4 border-green-600" src="">
+                    <h1 id="main-name" class="text-4xl font-bold text-green-400"></h1>
+                    <p id="main-title" class="text-lg text-gray-400 mt-1"></p>
+                </div>
+                <div class="mb-10 text-center">
+                    <h2 class="text-xl font-bold mb-3 border-b border-gray-700 pb-2">Biography</h2>
+                    <p id="main-bio" class="text-gray-300 italic"></p>
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold mb-4 text-center border-b border-gray-700 pb-2">Listen & Connect</h2>
+                    <div id="main-links" class="space-y-4"></div>
+                </div>
+            </div>
+            <div id="card-section" class="hidden">
+                <div class="bg-white p-6 rounded-xl qr-card-shadow text-gray-800">
+                    <div class="text-center mb-6">
+                        <h2 class="text-2xl font-bold">Digital Card</h2>
+                        <p class="text-sm text-gray-500">Scan to view portfolio</p>
+                    </div>
+                    <div class="atm-card mx-auto">
+                        <div class="flex flex-col items-center justify-center h-full w-1/2">
+                            <img id="card-photo" class="w-28 h-28 object-cover rounded-full mb-2 border-2 border-green-400" src="">
+                            <h3 id="card-name" class="artist-name-on-card"></h3>
+                        </div>
+                        <div class="flex items-center justify-center h-full w-1/2">
+                            <div id="qrcode" class="p-2 bg-white rounded-lg border"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-center mt-6">
+                    <button onclick="window.print()" class="px-6 py-3 rounded-full bg-blue-600 hover:bg-blue-700 font-semibold link-button"><i class="fas fa-print mr-2"></i> Print</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="editor-view" class="hidden bg-gray-800 p-8 rounded-xl qr-card-shadow">
+            <button onclick="showList()" class="mb-6 px-3 py-1 rounded-full bg-gray-700 hover:bg-gray-600"><i class="fas fa-arrow-left mr-1"></i> Back</button>
+            <div class="mb-6 p-4 bg-gray-900 rounded-xl border border-green-600/50">
+                <label class="block text-sm font-medium mb-2">Public URL (for QR Code)</label>
+                <input type="url" id="base-url" class="w-full rounded-md p-3 bg-gray-700 text-white" placeholder="https://yoursite.github.io" onchange="saveBaseUrl()">
+            </div>
+            <h2 id="editor-title" class="text-3xl font-bold mb-8 text-green-400">Create Artist</h2>
+            <div id="msg" class="hidden p-4 rounded-md mb-6"></div>
+            <form id="form" class="space-y-6">
+                <input type="hidden" id="edit-id">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Artist Name</label>
+                        <input type="text" id="name" required class="w-full rounded-md p-3 bg-gray-700 text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Title/Tagline</label>
+                        <input type="text" id="title" class="w-full rounded-md p-3 bg-gray-700 text-white">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Profile Image</label>
+                    <div class="flex items-center space-x-4">
+                        <img id="preview" src="https://placehold.co/100x100/374151/ffffff?text=NO" class="w-24 h-24 object-cover rounded-full border-2 border-green-600">
+                        <input type="file" id="img" accept="image/*" class="text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:bg-green-600 file:text-white">
+                        <button type="button" onclick="clearImg()" class="text-red-400"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                    <input type="hidden" id="img-data">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Biography</label>
+                    <textarea id="bio" rows="4" required class="w-full rounded-md p-3 bg-gray-700 text-white"></textarea>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-3 border-b border-gray-700 pb-2">Links</h3>
+                    <div id="links-container" class="space-y-4 p-4 bg-gray-700 rounded-lg"></div>
+                    <button type="button" onclick="addLink()" class="mt-4 px-4 py-2 bg-green-600 hover:bg-green-700 rounded-md font-semibold link-button"><i class="fas fa-plus mr-1"></i> Add Link</button>
+                </div>
+                <div class="flex justify-between">
+                    <button type="submit" class="px-6 py-3 bg-green-600 hover:bg-green-700 rounded-lg font-bold link-button"><i class="fas fa-save mr-2"></i> Save</button>
+                    <button type="button" onclick="deleteArtist()" id="del-btn" class="hidden px-6 py-3 bg-red-600 hover:bg-red-700 rounded-lg font-bold link-button"><i class="fas fa-trash-alt mr-2"></i> Delete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let data = {};
+        let currentId = null;
+        let qr = null;
+        const KEY = 'artistData';
+        const URL_KEY = 'baseUrl';
+        const DEFAULT = {
+            id: 'default',
+            name: "CADEAM",
+            title: "Music Artist",
+            bio: "Rising music artist blending emotion and storytelling.",
+            image: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNTAiIGhlaWdodD0iMTUwIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iIzcxN0ExRCIvPjx0ZXh0IHg9Ijc1IiB5PSI3NSIgZm9udC1zaXplPSIyNCIgZmlsbD0iI2ZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZG9taW5hbnQtYmFzZWxpbmU9ImNlbnRyYWwiPkNBREVBTTwvdGV4dD48L3N2Zz4=",
+            links: [
+                { platform: 'Spotify', url: 'https://open.spotify.com/artist/5OS4GkG0tx2UtAOVZy1a7Y', icon: 'fab fa-spotify', color: 'bg-green-600' },
+                { platform: 'Instagram', url: 'https://www.instagram.com/cadeam_', icon: 'fab fa-instagram', color: 'bg-pink-600' },
+            ],
+            timestamp: Date.now()
+        };
+
+        function load() {
+            const saved = localStorage.getItem(KEY);
+            data = saved ? JSON.parse(saved) : {};
+            if (!Object.keys(data).length) data[DEFAULT.id] = DEFAULT;
+        }
+
+        function save() {
+            localStorage.setItem(KEY, JSON.stringify(data));
+        }
+
+        function loadBaseUrl() {
+            const url = localStorage.getItem(URL_KEY) || '';
+            document.getElementById('base-url').value = url;
+            return url;
+        }
+
+        function saveBaseUrl() {
+            const url = document.getElementById('base-url').value.trim().replace(/\/+$/, '');
+            localStorage.setItem(URL_KEY, url);
+            showMsg("URL saved", "success");
+        }
+
+        function isAdmin() {
+            return new URLSearchParams(window.location.search).get('admin') === 'true';
+        }
+
+        function showList() {
+            hideAll();
+            document.getElementById('list-view').classList.remove('hidden');
+            if (isAdmin()) document.getElementById('nav-bar').classList.remove('hidden');
+            renderList();
+        }
+
+        function showPortfolio(artist) {
+            hideAll();
+            document.getElementById('portfolio-view').classList.remove('hidden');
+            if (isAdmin()) {
+                document.getElementById('nav-bar').classList.remove('hidden');
+                document.getElementById('back-btn').classList.remove('hidden');
+            }
+            renderPortfolio(artist);
+            showLinks();
+        }
+
+        function showEditor(artist) {
+            if (!isAdmin()) return;
+            hideAll();
+            document.getElementById('editor-view').classList.remove('hidden');
+            document.getElementById('nav-bar').classList.remove('hidden');
+            document.getElementById('form').reset();
+            document.getElementById('links-container').innerHTML = '';
+            loadBaseUrl();
+            
+            if (artist) {
+                currentId = artist.id;
+                document.getElementById('editor-title').textContent = `Edit: ${artist.name}`;
+                document.getElementById('edit-id').value = artist.id;
+                document.getElementById('name').value = artist.name;
+                document.getElementById('title').value = artist.title || '';
+                document.getElementById('bio').value = artist.bio;
+                document.getElementById('img-data').value = artist.image || '';
+                document.getElementById('preview').src = artist.image || 'https://placehold.co/100x100/374151/ffffff?text=NO';
+                document.getElementById('del-btn').classList.remove('hidden');
+                (artist.links || []).forEach(l => addLink(l.platform, l.url));
+            } else {
+                currentId = null;
+                document.getElementById('editor-title').textContent = 'Create Artist';
+                document.getElementById('del-btn').classList.add('hidden');
+                addLink();
+            }
+        }
+
+        function hideAll() {
+            ['list-view', 'portfolio-view', 'editor-view', 'nav-bar', 'back-btn'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+        }
+
+        function showLinks() {
+            document.getElementById('links-section').classList.remove('hidden');
+            document.getElementById('card-section').classList.add('hidden');
+            document.getElementById('links-tab').className = 'px-6 py-2 rounded-full bg-green-600 font-semibold link-button';
+            document.getElementById('card-tab').className = 'px-6 py-2 rounded-full bg-gray-700 font-semibold link-button';
+        }
+
+        function showCard() {
+            document.getElementById('links-section').classList.add('hidden');
+            document.getElementById('card-section').classList.remove('hidden');
+            document.getElementById('card-tab').className = 'px-6 py-2 rounded-full bg-green-600 font-semibold link-button';
+            document.getElementById('links-tab').className = 'px-6 py-2 rounded-full bg-gray-700 font-semibold link-button';
+            initQR(currentId);
+        }
+
+        function renderList() {
+            const container = document.getElementById('artist-list');
+            const ids = Object.keys(data);
+            if (!ids.length) {
+                container.innerHTML = '<p class="text-center text-gray-400 p-8">No artists. Click "New" to add one!</p>';
+                return;
+            }
+            ids.sort((a, b) => data[b].timestamp - data[a].timestamp);
+            container.innerHTML = ids.map(id => {
+                const a = data[id];
+                return `<div class="flex items-center justify-between p-4 bg-gray-700 rounded-lg mb-4">
+                    <div class="flex items-center space-x-4">
+                        <img src="${a.image || 'https://placehold.co/50'}" class="w-12 h-12 object-cover rounded-full border-2 border-green-500">
+                        <div>
+                            <p class="font-semibold">${a.name}</p>
+                            <p class="text-sm text-gray-400">${a.title || ''}</p>
+                        </div>
+                    </div>
+                    <div class="space-x-2">
+                        <button onclick='showPortfolio(${JSON.stringify(a).replace(/'/g, "&#39;")})' class="px-3 py-1 text-sm rounded-full bg-green-600 hover:bg-green-700 link-button"><i class="fas fa-eye"></i> View</button>
+                        <button onclick='showEditor(${JSON.stringify(a).replace(/'/g, "&#39;")})' class="px-3 py-1 text-sm rounded-full bg-blue-600 hover:bg-blue-700 link-button"><i class="fas fa-edit"></i> Edit</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function renderPortfolio(artist) {
+            currentId = artist.id;
+            document.getElementById('main-photo').src = artist.image || 'https://placehold.co/150';
+            document.getElementById('main-name').textContent = artist.name;
+            document.getElementById('main-title').textContent = artist.title || '';
+            document.getElementById('main-bio').textContent = artist.bio;
+            document.getElementById('card-photo').src = artist.image || 'https://placehold.co/150';
+            document.getElementById('card-name').textContent = artist.name;
+            document.getElementById('main-links').innerHTML = (artist.links || []).map(l => 
+                `<a href="${l.url}" target="_blank" class="link-button flex items-center justify-between p-4 ${l.color} rounded-lg text-lg font-bold">
+                    <span><i class="${l.icon} mr-4"></i> ${l.platform}</span>
+                    <i class="fas fa-chevron-right"></i>
+                </a>`
+            ).join('');
+        }
+
+        function addLink(platform = '', url = '') {
+            const div = document.createElement('div');
+            div.className = 'flex space-x-2';
+            div.innerHTML = `
+                <input type="text" value="${platform}" placeholder="Platform" class="flex-1 rounded-md p-2 bg-gray-600 text-white link-plat">
+                <input type="url" value="${url}" placeholder="URL" class="flex-2 w-full rounded-md p-2 bg-gray-600 text-white link-url">
+                <button type="button" onclick="this.parentNode.remove()" class="px-3 py-1 bg-red-500 rounded-md text-white"><i class="fas fa-minus"></i></button>
+            `;
+            document.getElementById('links-container').appendChild(div);
+        }
+
+        function resize(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let w = img.width, h = img.height;
+                        const max = 300;
+                        if (w > h && w > max) { h *= max / w; w = max; }
+                        else if (h > max) { w *= max / h; h = max; }
+                        canvas.width = w;
+                        canvas.height = h;
+                        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                        resolve(canvas.toDataURL('image/jpeg', 0.7));
+                    };
+                    img.onerror = reject;
+                    img.src = e.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function clearImg() {
+            document.getElementById('img').value = '';
+            document.getElementById('img-data').value = '';
+            document.getElementById('preview').src = 'https://placehold.co/100x100/374151/ffffff?text=NO';
+        }
+
+        function showMsg(msg, type = 'success') {
+            const box = document.getElementById('msg');
+            box.textContent = msg;
+            box.className = `p-4 rounded-md mb-6 ${type === 'success' ? 'bg-green-900/50 border border-green-600 text-green-300' : 'bg-red-900/50 border border-red-600 text-red-300'}`;
+            box.classList.remove('hidden');
+            setTimeout(() => box.classList.add('hidden'), 3000);
+        }
+
+        function deleteArtist() {
+            if (!currentId || !confirm('Delete? Cannot undo.')) return;
+            delete data[currentId];
+            save();
+            showList();
+        }
+
+        function initQR(id) {
+            const canvas = document.getElementById('qrcode');
+            canvas.innerHTML = '';
+            let base = loadBaseUrl() || window.location.href.split('#')[0].split('?')[0];
+            if (!base.endsWith('/')) base += '/';
+            const url = `${base}#${id}`;
+            qr = new QRCode(canvas, { text: url, width: 130, height: 130 });
+        }
+
+        function init() {
+            load();
+            const hash = window.location.hash.substring(1);
+            const ids = Object.keys(data);
+            let target = null;
+            
+            if (hash && data[hash]) target = data[hash];
+            else if (ids.length) {
+                ids.sort((a, b) => data[b].timestamp - data[a].timestamp);
+                target = data[ids[0]];
+            } else target = DEFAULT;
+
+            if (isAdmin()) showList();
+            else showPortfolio(target);
+        }
+
+        document.getElementById('img').addEventListener('change', async e => {
+            const file = e.target.files[0];
+            if (file) {
+                try {
+                    const b64 = await resize(file);
+                    document.getElementById('img-data').value = b64;
+                    document.getElementById('preview').src = b64;
+                    showMsg("Image ready");
+                } catch {
+                    showMsg("Image error", "error");
+                }
+            }
+        });
+
+        document.getElementById('form').addEventListener('submit', e => {
+            e.preventDefault();
+            const id = document.getElementById('edit-id').value || crypto.randomUUID();
+            const links = [];
+            document.querySelectorAll('#links-container > div').forEach(div => {
+                const p = div.querySelector('.link-plat').value.trim();
+                const u = div.querySelector('.link-url').value.trim();
+                if (!p || !u) return;
+                let icon = 'fas fa-link', color = 'bg-gray-700';
+                const lp = p.toLowerCase();
+                if (lp.includes('spotify')) { icon = 'fab fa-spotify'; color = 'bg-green-600'; }
+                else if (lp.includes('apple')) { icon = 'fab fa-apple'; color = 'bg-gray-700'; }
+                else if (lp.includes('youtube')) { icon = 'fab fa-youtube'; color = 'bg-red-600'; }
+                else if (lp.includes('instagram')) { icon = 'fab fa-instagram'; color = 'bg-pink-600'; }
+                else if (lp.includes('tiktok')) { icon = 'fab fa-tiktok'; color = 'bg-black'; }
+                else if (lp.includes('facebook')) { icon = 'fab fa-facebook'; color = 'bg-blue-700'; }
+                links.push({ platform: p, url: u, icon, color });
+            });
+
+            data[id] = {
+                id,
+                name: document.getElementById('name').value.trim(),
+                title: document.getElementById('title').value.trim(),
+                bio: document.getElementById('bio').value.trim(),
+                image: document.getElementById('img-data').value,
+                links,
+                timestamp: Date.now()
+            };
+            save();
+            showMsg("Saved!");
+            setTimeout(() => showList(), 1500);
+        });
+
+        window.addEventListener('load', init);
+        window.addEventListener('hashchange', init);
+    </script>
+</body>
+</html>
