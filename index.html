@@ -9,15 +9,214 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #0d0d0d; }
-        .link-button { transition: all 0.2s; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5); }
-        .link-button:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3); }
+        .link-button { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5); }
+        .link-button:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3); }
         .qr-card-shadow { box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.7); }
         .atm-card { width: 320px; height: 200px; border-radius: 15px; background: linear-gradient(135deg, #1f2937, #374151); color: white; padding: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
         .artist-name-on-card { font-size: 1.25rem; font-weight: 700; color: #34d399; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
+        
+        /* Loading Animation Styles */
+        #loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0d0d0d 0%, #1a1a2e 50%, #16213e 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease-out;
+        }
+        
+        #loading-screen.fade-out {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .loader-container {
+            position: relative;
+            width: 200px;
+            height: 200px;
+        }
+        
+        .vinyl-record {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #1a1a1a 100%);
+            position: absolute;
+            top: 25px;
+            left: 25px;
+            animation: spin 2s linear infinite;
+            box-shadow: 0 0 30px rgba(16, 185, 129, 0.3);
+        }
+        
+        .vinyl-record::before {
+            content: '';
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: #10b981;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+        }
+        
+        .vinyl-record::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: repeating-conic-gradient(
+                from 0deg,
+                transparent 0deg 2deg,
+                rgba(255, 255, 255, 0.03) 2deg 4deg
+            );
+        }
+        
+        .pulse-ring {
+            width: 200px;
+            height: 200px;
+            border: 3px solid #10b981;
+            border-radius: 50%;
+            position: absolute;
+            animation: pulse 2s ease-out infinite;
+            opacity: 0;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(0.8); opacity: 0; }
+            50% { opacity: 0.5; }
+            100% { transform: scale(1.2); opacity: 0; }
+        }
+        
+        .loading-text {
+            margin-top: 40px;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #10b981;
+            text-align: center;
+            animation: fadeInOut 2s ease-in-out infinite;
+        }
+        
+        .loading-subtext {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #9ca3af;
+            text-align: center;
+            animation: fadeInOut 2s ease-in-out infinite 0.5s;
+        }
+        
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+        
+        /* Page Entrance Animation */
+        .page-enter {
+            animation: pageSlideIn 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        @keyframes pageSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Staggered Link Animations */
+        .link-item {
+            opacity: 0;
+            animation: linkFadeIn 0.5s ease-out forwards;
+        }
+        
+        .link-item:nth-child(1) { animation-delay: 0.1s; }
+        .link-item:nth-child(2) { animation-delay: 0.2s; }
+        .link-item:nth-child(3) { animation-delay: 0.3s; }
+        .link-item:nth-child(4) { animation-delay: 0.4s; }
+        .link-item:nth-child(5) { animation-delay: 0.5s; }
+        .link-item:nth-child(6) { animation-delay: 0.6s; }
+        .link-item:nth-child(7) { animation-delay: 0.7s; }
+        .link-item:nth-child(8) { animation-delay: 0.8s; }
+        .link-item:nth-child(9) { animation-delay: 0.9s; }
+        .link-item:nth-child(10) { animation-delay: 1s; }
+        
+        @keyframes linkFadeIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        /* Profile Image Animation */
+        .profile-image-enter {
+            animation: profileZoom 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        @keyframes profileZoom {
+            from {
+                opacity: 0;
+                transform: scale(0.5) rotate(-10deg);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) rotate(0deg);
+            }
+        }
+        
+        /* Text Reveal Animation */
+        .text-reveal {
+            opacity: 0;
+            animation: textReveal 0.6s ease-out forwards;
+        }
+        
+        .text-reveal:nth-child(2) { animation-delay: 0.2s; }
+        .text-reveal:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes textReveal {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-8 px-4 text-white">
-    <div id="app" class="w-full max-w-4xl">
+    <!-- Loading Screen -->
+    <div id="loading-screen">
+        <div class="loader-container">
+            <div class="pulse-ring"></div>
+            <div class="pulse-ring" style="animation-delay: 0.5s;"></div>
+            <div class="vinyl-record"></div>
+        </div>
+        <div class="loading-text">Loading ArtistLink Hub</div>
+        <div class="loading-subtext">Preparing your experience...</div>
+    </div>
+    
+    <div id="app" class="w-full max-w-4xl" style="display: none;">
         <div id="nav-bar" class="hidden flex justify-between items-center mb-8 p-4 bg-gray-900 rounded-xl">
             <h1 class="text-xl font-bold text-green-400">ArtistLink Hub | ADMIN</h1>
             <div class="space-x-3">
@@ -39,11 +238,11 @@
             </div>
             <div id="links-section">
                 <div class="text-center mb-8">
-                    <img id="main-photo" class="w-28 h-28 object-cover rounded-full mx-auto mb-4 border-4 border-green-600" src="">
-                    <h1 id="main-name" class="text-4xl font-bold text-green-400"></h1>
-                    <p id="main-title" class="text-lg text-gray-400 mt-1"></p>
+                    <img id="main-photo" class="w-28 h-28 object-cover rounded-full mx-auto mb-4 border-4 border-green-600 profile-image-enter" src="">
+                    <h1 id="main-name" class="text-4xl font-bold text-green-400 text-reveal"></h1>
+                    <p id="main-title" class="text-lg text-gray-400 mt-1 text-reveal"></p>
                 </div>
-                <div class="mb-10 text-center">
+                <div class="mb-10 text-center text-reveal">
                     <h2 class="text-xl font-bold mb-3 border-b border-gray-700 pb-2">Biography</h2>
                     <p id="main-bio" class="text-gray-300 italic"></p>
                 </div>
@@ -133,12 +332,20 @@
         const DEFAULT = {
             id: 'default',
             name: "CADEAM",
-            title: "Music Artist",
-            bio: "Rising music artist blending emotion and storytelling.",
+            title: "Music Artist, Storyteller",
+            bio: "Cadeam is a rising music artist known for blending emotion, rhythm, and raw storytelling into every track. With a unique sound that cuts across genres, Cadeam brings authenticity and passion to every performance. From early beginnings to a growing fanbase, Cadeam continues to push creative boundaries and connect with listeners around the world.",
             image: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNTAiIGhlaWdodD0iMTUwIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iIzcxN0ExRCIvPjx0ZXh0IHg9Ijc1IiB5PSI3NSIgZm9udC1zaXplPSIyNCIgZmlsbD0iI2ZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZG9taW5hbnQtYmFzZWxpbmU9ImNlbnRyYWwiPkNBREVBTTwvdGV4dD48L3N2Zz4=",
             links: [
-                { platform: 'Spotify', url: 'https://open.spotify.com/artist/5OS4GkG0tx2UtAOVZy1a7Y', icon: 'fab fa-spotify', color: 'bg-green-600' },
-                { platform: 'Instagram', url: 'https://www.instagram.com/cadeam_', icon: 'fab fa-instagram', color: 'bg-pink-600' },
+                { platform: 'Spotify', url: 'https://open.spotify.com/artist/5OS4GkG0tx2UtAOVZy1a7Y?si=nD4L7R8YQyK5c_gaj2KfTA', icon: 'fab fa-spotify', color: 'bg-green-600' },
+                { platform: 'Apple Music', url: 'https://music.apple.com/ng/artist/cadeam/1749392029', icon: 'fab fa-apple', color: 'bg-gray-700' },
+                { platform: 'Audiomack', url: 'https://audiomack.com/cadeam_', icon: 'fas fa-headphones', color: 'bg-orange-500' },
+                { platform: 'Boomplay', url: 'https://www.boomplay.com/share/artist/91441617?srModel=COPYLINK&srList=IOS', icon: 'fas fa-music', color: 'bg-purple-600' },
+                { platform: 'YouTube', url: 'https://youtube.com/@iamcadeam?si=TgRXhF6igRud4Ei6', icon: 'fab fa-youtube', color: 'bg-red-600' },
+                { platform: 'Instagram', url: 'https://www.instagram.com/cadeam_?igsh=MW4xNWJueDFnNHZpcA%3D%3D&utm_source=qr', icon: 'fab fa-instagram', color: 'bg-pink-600' },
+                { platform: 'Facebook', url: 'https://www.facebook.com/share/1Cj98seHKH/?mibextid=wwXIfr', icon: 'fab fa-facebook', color: 'bg-blue-700' },
+                { platform: 'Snapchat', url: 'https://snapchat.com/t/BKCSOgS1', icon: 'fab fa-snapchat', color: 'bg-yellow-400' },
+                { platform: 'TikTok', url: 'https://www.tiktok.com/@cadeam_?_t=ZS-90jxlFgCY7u&_r=1', icon: 'fab fa-tiktok', color: 'bg-black' },
+                { platform: 'YouTube Music', url: 'https://music.youtube.com/channel/UCLbRIEXnZxZWx-evv8hEWng?si=_CUENNESf5Rp50VU', icon: 'fab fa-youtube', color: 'bg-red-500' },
             ],
             timestamp: Date.now()
         };
@@ -283,8 +490,8 @@
             document.getElementById('main-bio').textContent = artist.bio;
             document.getElementById('card-photo').src = artist.image || 'https://placehold.co/150';
             document.getElementById('card-name').textContent = artist.name;
-            document.getElementById('main-links').innerHTML = (artist.links || []).map(l => 
-                `<a href="${l.url}" target="_blank" class="link-button flex items-center justify-between p-4 ${l.color} rounded-lg text-lg font-bold">
+            document.getElementById('main-links').innerHTML = (artist.links || []).map((l, index) => 
+                `<a href="${l.url}" target="_blank" class="link-button link-item flex items-center justify-between p-4 ${l.color} rounded-lg text-lg font-bold">
                     <span><i class="${l.icon} mr-4"></i> ${l.platform}</span>
                     <i class="fas fa-chevron-right"></i>
                 </a>`
@@ -429,10 +636,13 @@
                 const lp = p.toLowerCase();
                 if (lp.includes('spotify')) { icon = 'fab fa-spotify'; color = 'bg-green-600'; }
                 else if (lp.includes('apple')) { icon = 'fab fa-apple'; color = 'bg-gray-700'; }
+                else if (lp.includes('audiomack')) { icon = 'fas fa-headphones'; color = 'bg-orange-500'; }
+                else if (lp.includes('boomplay')) { icon = 'fas fa-music'; color = 'bg-purple-600'; }
                 else if (lp.includes('youtube')) { icon = 'fab fa-youtube'; color = 'bg-red-600'; }
                 else if (lp.includes('instagram')) { icon = 'fab fa-instagram'; color = 'bg-pink-600'; }
                 else if (lp.includes('tiktok')) { icon = 'fab fa-tiktok'; color = 'bg-black'; }
                 else if (lp.includes('facebook')) { icon = 'fab fa-facebook'; color = 'bg-blue-700'; }
+                else if (lp.includes('snapchat')) { icon = 'fab fa-snapchat', color = 'bg-yellow-400'; }
                 links.push({ platform: p, url: u, icon, color });
             });
 
