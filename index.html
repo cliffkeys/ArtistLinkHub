@@ -660,8 +660,21 @@
             setTimeout(() => showList(), 1500);
         });
 
-        window.addEventListener('load', init);
-        window.addEventListener('hashchange', init);
+        // Start immediately when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+        
+        window.addEventListener('hashchange', () => {
+            console.log('Hash changed, reinitializing...');
+            // Don't show loading screen again on hash change
+            const hash = window.location.hash.substring(1);
+            if (hash && data[hash]) {
+                showPortfolio(data[hash]);
+            }
+        });
     </script>
 </body>
 </html>
