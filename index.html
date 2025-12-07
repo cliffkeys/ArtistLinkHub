@@ -227,7 +227,10 @@
             </div>
             <div id="links-section">
                 <div class="text-center mb-8">
-                    <img id="main-photo" class="w-28 h-28 object-cover rounded-full mx-auto mb-4 border-4 border-green-600 profile-image-enter" src="">
+                    <img id="main-photo" class="w-28 h-28 object-cover rounded-full mx-auto mb-4 border-4 border-green-600 profile-image-enter" 
+                         src="" 
+                         alt="Artist Photo"
+                         onerror="this.src='https://ui-avatars.com/api/?name=Artist&size=150&background=10b981&color=fff&bold=true'">
                     <h1 id="main-name" class="text-4xl font-bold text-green-400 text-reveal"></h1>
                     <p id="main-title" class="text-lg text-gray-400 mt-1 text-reveal"></p>
                 </div>
@@ -388,10 +391,17 @@
         function showPortfolio(artist) {
             hideAll();
             document.getElementById('portfolio-view').classList.remove('hidden');
+            
+            // Show toggles and back button only in admin mode
             if (isAdmin()) {
                 document.getElementById('nav-bar').classList.remove('hidden');
                 document.getElementById('back-btn').classList.remove('hidden');
+                document.getElementById('portfolio-toggles').classList.remove('hidden');
+            } else {
+                // Public view - hide toggles, always show links only
+                document.getElementById('portfolio-toggles').classList.add('hidden');
             }
+            
             renderPortfolio(artist);
             showLinks();
         }
@@ -473,11 +483,17 @@
 
         function renderPortfolio(artist) {
             currentId = artist.id;
-            document.getElementById('main-photo').src = artist.image || 'https://placehold.co/150';
+            const mainPhoto = document.getElementById('main-photo');
+            const cardPhoto = document.getElementById('card-photo');
+            
+            // Set image with fallback
+            const imageUrl = artist.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(artist.name)}&size=150&background=10b981&color=fff&bold=true`;
+            mainPhoto.src = imageUrl;
+            cardPhoto.src = imageUrl;
+            
             document.getElementById('main-name').textContent = artist.name;
             document.getElementById('main-title').textContent = artist.title || '';
             document.getElementById('main-bio').textContent = artist.bio;
-            document.getElementById('card-photo').src = artist.image || 'https://placehold.co/150';
             document.getElementById('card-name').textContent = artist.name;
             document.getElementById('main-links').innerHTML = (artist.links || []).map((l, index) => 
                 `<a href="${l.url}" target="_blank" class="link-button link-item flex items-center justify-between p-4 ${l.color} rounded-lg text-lg font-bold">
