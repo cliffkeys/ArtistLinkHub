@@ -205,18 +205,7 @@
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center py-8 px-4 text-white">
-    <!-- Loading Screen -->
-    <div id="loading-screen">
-        <div class="loader-container">
-            <div class="pulse-ring"></div>
-            <div class="pulse-ring" style="animation-delay: 0.5s;"></div>
-            <div class="vinyl-record"></div>
-        </div>
-        <div class="loading-text">Loading ArtistLink Hub</div>
-        <div class="loading-subtext">Preparing your experience...</div>
-    </div>
-    
-    <div id="app" class="w-full max-w-4xl" style="display: none;">
+    <div id="app" class="w-full max-w-4xl">
         <div id="nav-bar" class="hidden flex justify-between items-center mb-8 p-4 bg-gray-900 rounded-xl">
             <h1 class="text-xl font-bold text-green-400">ArtistLink Hub | ADMIN</h1>
             <div class="space-x-3">
@@ -660,21 +649,8 @@
             setTimeout(() => showList(), 1500);
         });
 
-        // Start immediately when DOM is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', init);
-        } else {
-            init();
-        }
-        
-        window.addEventListener('hashchange', () => {
-            console.log('Hash changed, reinitializing...');
-            // Don't show loading screen again on hash change
-            const hash = window.location.hash.substring(1);
-            if (hash && data[hash]) {
-                showPortfolio(data[hash]);
-            }
-        });
+        window.addEventListener('load', init);
+        window.addEventListener('hashchange', init);
     </script>
 </body>
 </html>
