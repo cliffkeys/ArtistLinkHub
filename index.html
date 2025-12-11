@@ -3,148 +3,121 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Artist Portfolio</title>
+    <title>CADEAM - Music Artist</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #0d0d0d; }
-        .link-button { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5); }
-        .link-button:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3); }
-        .qr-card-shadow { box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.7); }
-        .atm-card { width: 320px; height: 200px; border-radius: 15px; background: linear-gradient(135deg, #1f2937, #374151); color: white; padding: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
-        .artist-name-on-card { font-size: 1.25rem; font-weight: 700; color: #34d399; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: linear-gradient(135deg, #0d0d0d 0%, #1a1a2e 50%, #0d0d0d 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
         
-        /* Loading Animation Styles */
-        #loading-screen {
+        /* Animated Background Particles */
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+        
+        .particle {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, #0d0d0d 0%, #1a1a2e 50%, #16213e 100%);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            transition: opacity 0.5s ease-out;
-        }
-        
-        #loading-screen.fade-out {
-            opacity: 0;
-            pointer-events: none;
-        }
-        
-        .loader-container {
-            position: relative;
-            width: 200px;
-            height: 200px;
-        }
-        
-        .vinyl-record {
-            width: 150px;
-            height: 150px;
+            background: rgba(16, 185, 129, 0.1);
             border-radius: 50%;
-            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #1a1a1a 100%);
-            position: absolute;
-            top: 25px;
-            left: 25px;
-            animation: spin 2s linear infinite;
-            box-shadow: 0 0 30px rgba(16, 185, 129, 0.3);
+            pointer-events: none;
+            animation: float 6s infinite ease-in-out;
         }
         
-        .vinyl-record::before {
+        /* Card Entrance Animation */
+        .card-container {
+            animation: cardEntrance 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        
+        @keyframes cardEntrance {
+            0% {
+                opacity: 0;
+                transform: scale(0.8) rotateX(20deg);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) rotateX(0deg);
+            }
+        }
+        
+        .card-shadow { 
+            box-shadow: 0 20px 60px rgba(16, 185, 129, 0.3), 
+                        0 0 80px rgba(16, 185, 129, 0.1);
+            transition: all 0.4s ease;
+        }
+        
+        .card-shadow:hover {
+            box-shadow: 0 30px 80px rgba(16, 185, 129, 0.4), 
+                        0 0 120px rgba(16, 185, 129, 0.2);
+            transform: translateY(-5px);
+        }
+        
+        /* Link Button Animations */
+        .link-button { 
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55); 
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .link-button::before {
             content: '';
             position: absolute;
-            width: 40px;
-            height: 40px;
-            background: #10b981;
-            border-radius: 50%;
             top: 50%;
             left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
             transform: translate(-50%, -50%);
-            box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+            transition: width 0.6s, height 0.6s;
         }
         
-        .vinyl-record::after {
-            content: '';
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            background: repeating-conic-gradient(
-                from 0deg,
-                transparent 0deg 2deg,
-                rgba(255, 255, 255, 0.03) 2deg 4deg
-            );
+        .link-button:hover::before {
+            width: 300px;
+            height: 300px;
         }
         
-        .pulse-ring {
-            width: 200px;
-            height: 200px;
-            border: 3px solid #10b981;
-            border-radius: 50%;
-            position: absolute;
-            animation: pulse 2s ease-out infinite;
-            opacity: 0;
+        .link-button:hover { 
+            transform: translateY(-8px) scale(1.03) rotate(1deg); 
+            box-shadow: 0 20px 40px rgba(16, 185, 129, 0.5),
+                        0 0 30px rgba(16, 185, 129, 0.3);
         }
         
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+        .link-button:active {
+            transform: translateY(-4px) scale(0.98);
         }
         
-        @keyframes pulse {
-            0% { transform: scale(0.8); opacity: 0; }
-            50% { opacity: 0.5; }
-            100% { transform: scale(1.2); opacity: 0; }
+        /* Icon Spin on Hover */
+        .link-button:hover .icon-spin {
+            animation: iconBounce 0.6s ease-in-out;
         }
         
-        .loading-text {
-            margin-top: 40px;
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #10b981;
-            text-align: center;
-            animation: fadeInOut 2s ease-in-out infinite;
+        @keyframes iconBounce {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            25% { transform: scale(1.2) rotate(10deg); }
+            75% { transform: scale(1.2) rotate(-10deg); }
         }
         
-        .loading-subtext {
-            margin-top: 10px;
-            font-size: 0.9rem;
-            color: #9ca3af;
-            text-align: center;
-            animation: fadeInOut 2s ease-in-out infinite 0.5s;
+        /* Arrow Slide on Hover */
+        .link-button:hover .arrow-slide {
+            animation: arrowSlide 0.6s ease-in-out infinite;
         }
         
-        @keyframes fadeInOut {
-            0%, 100% { opacity: 0.5; }
-            50% { opacity: 1; }
-        }
-        
-        /* Page Entrance Animation */
-        .page-enter {
-            animation: pageSlideIn 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        @keyframes pageSlideIn {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        @keyframes arrowSlide {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(10px); }
         }
         
         /* Staggered Link Animations */
         .link-item {
             opacity: 0;
-            animation: linkFadeIn 0.5s ease-out forwards;
+            animation: linkSlideIn 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
         }
-        
         .link-item:nth-child(1) { animation-delay: 0.1s; }
         .link-item:nth-child(2) { animation-delay: 0.2s; }
         .link-item:nth-child(3) { animation-delay: 0.3s; }
@@ -156,43 +129,142 @@
         .link-item:nth-child(9) { animation-delay: 0.9s; }
         .link-item:nth-child(10) { animation-delay: 1s; }
         
-        @keyframes linkFadeIn {
-            from {
+        @keyframes linkSlideIn {
+            0% {
                 opacity: 0;
-                transform: translateX(-20px);
+                transform: translateX(-100px) rotate(-5deg);
             }
-            to {
+            100% {
                 opacity: 1;
-                transform: translateX(0);
+                transform: translateX(0) rotate(0deg);
             }
         }
         
         /* Profile Image Animation */
-        .profile-image-enter {
-            animation: profileZoom 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        .profile-enter {
+            animation: profilePop 1.2s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            position: relative;
         }
         
-        @keyframes profileZoom {
-            from {
+        .profile-enter::after {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            right: -10px;
+            bottom: -10px;
+            border-radius: 50%;
+            border: 3px solid rgba(16, 185, 129, 0.3);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes profilePop {
+            0% {
                 opacity: 0;
-                transform: scale(0.5) rotate(-10deg);
+                transform: scale(0) rotate(-180deg);
             }
-            to {
+            70% {
+                transform: scale(1.1) rotate(10deg);
+            }
+            100% {
                 opacity: 1;
                 transform: scale(1) rotate(0deg);
             }
         }
         
-        /* Text Reveal Animation */
-        .text-reveal {
-            opacity: 0;
-            animation: textReveal 0.6s ease-out forwards;
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 0.5;
+            }
+            50% {
+                transform: scale(1.1);
+                opacity: 0;
+            }
         }
         
-        .text-reveal:nth-child(2) { animation-delay: 0.2s; }
-        .text-reveal:nth-child(3) { animation-delay: 0.4s; }
+        /* Profile Image Hover */
+        .profile-enter:hover {
+            animation: profileShake 0.5s ease-in-out;
+        }
         
-        @keyframes textReveal {
+        @keyframes profileShake {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(5deg) scale(1.05); }
+            75% { transform: rotate(-5deg) scale(1.05); }
+        }
+        
+        /* Text Animations */
+        .text-reveal {
+            opacity: 0;
+            animation: textGlow 1s ease-out forwards;
+        }
+        .text-reveal:nth-of-type(1) { animation-delay: 0.3s; }
+        .text-reveal:nth-of-type(2) { animation-delay: 0.5s; }
+        .text-reveal:nth-of-type(3) { animation-delay: 0.7s; }
+        
+        @keyframes textGlow {
+            0% {
+                opacity: 0;
+                transform: translateY(30px);
+                text-shadow: 0 0 0 rgba(16, 185, 129, 0);
+            }
+            50% {
+                text-shadow: 0 0 20px rgba(16, 185, 129, 0.8);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+                text-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+            }
+        }
+        
+        /* Biography Section */
+        .bio-section {
+            opacity: 0;
+            animation: bioFadeIn 1s ease-out 0.8s forwards;
+        }
+        
+        @keyframes bioFadeIn {
+            0% {
+                opacity: 0;
+                transform: translateY(40px) scale(0.95);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        /* Section Headers Glow */
+        .section-header {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .section-header::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #10b981, transparent);
+            transition: width 0.6s ease;
+        }
+        
+        .section-header:hover::after {
+            width: 100%;
+        }
+        
+        /* Footer Animation */
+        .footer-text {
+            opacity: 0;
+            animation: footerFade 1s ease-out 1.5s forwards;
+        }
+        
+        @keyframes footerFade {
             from {
                 opacity: 0;
                 transform: translateY(20px);
@@ -202,455 +274,111 @@
                 transform: translateY(0);
             }
         }
+        
+        /* Gradient Text */
+        .gradient-text {
+            background: linear-gradient(135deg, #10b981, #34d399, #6ee7b7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradientShift 3s ease infinite;
+            background-size: 200% 200%;
+        }
+        
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center py-8 px-4 text-white">
-    <div id="app" class="w-full max-w-4xl">
-        <div id="nav-bar" class="hidden flex justify-between items-center mb-8 p-4 bg-gray-900 rounded-xl">
-            <h1 class="text-xl font-bold text-green-400">ArtistLink Hub | ADMIN</h1>
-            <div class="space-x-3">
-                <button onclick="showList()" class="px-4 py-1 rounded-full bg-gray-700 hover:bg-gray-600 font-semibold link-button"><i class="fas fa-users mr-1"></i> List</button>
-                <button onclick="showEditor(null)" class="px-4 py-1 rounded-full bg-green-600 hover:bg-green-700 font-semibold link-button"><i class="fas fa-plus-circle mr-1"></i> New</button>
+<body class="flex items-center justify-center py-8 px-4">
+    <!-- Animated Background Particles -->
+    <div class="particle" style="width: 100px; height: 100px; top: 10%; left: 10%; animation-delay: 0s;"></div>
+    <div class="particle" style="width: 150px; height: 150px; top: 60%; left: 80%; animation-delay: 1s;"></div>
+    <div class="particle" style="width: 80px; height: 80px; top: 80%; left: 20%; animation-delay: 2s;"></div>
+    <div class="particle" style="width: 120px; height: 120px; top: 30%; left: 70%; animation-delay: 1.5s;"></div>
+    
+    <div class="w-full max-w-4xl bg-gray-800 p-8 md:p-12 rounded-xl card-shadow card-container">
+        <!-- Artist Header -->
+        <div class="text-center mb-8">
+            <div class="inline-block">
+                <img src="img/images.jpeg" 
+                     alt="CADEAM" 
+                     class="w-32 h-32 object-cover rounded-full mx-auto mb-4 border-4 border-green-500 shadow-xl profile-enter"
+                     onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27150%27 height=%27150%27 viewBox=%270 0 150 150%27%3E%3Ccircle cx=%2775%27 cy=%2775%27 r=%2775%27 fill=%27%2310b981%27/%3E%3Ctext x=%2775%27 y=%2775%27 font-size=%2740%27 fill=%27white%27 text-anchor=%27middle%27 dominant-baseline=%27central%27 font-weight=%27bold%27%3ECA%3C/text%3E%3C/svg%3E'">
             </div>
-        </div>
-        
-        <div id="list-view" class="hidden bg-gray-800 p-8 rounded-xl qr-card-shadow">
-            <h2 class="text-3xl font-bold mb-6 text-center text-green-400">Managed Artists</h2>
-            <div id="artist-list"></div>
-        </div>
-
-        <div id="portfolio-view" class="hidden bg-gray-800 p-8 rounded-xl qr-card-shadow">
-            <button onclick="showList()" id="back-btn" class="hidden mb-4 px-3 py-1 text-sm rounded-full bg-gray-700 hover:bg-gray-600"><i class="fas fa-arrow-left mr-1"></i> Back</button>
-            <div class="flex justify-center mb-8 space-x-4">
-                <button onclick="showLinks()" id="links-tab" class="px-6 py-2 rounded-full bg-green-600 font-semibold link-button"><i class="fas fa-link mr-2"></i> Links</button>
-                <button onclick="showCard()" id="card-tab" class="px-6 py-2 rounded-full bg-gray-700 font-semibold link-button"><i class="fas fa-qrcode mr-2"></i> Card</button>
-            </div>
-            <div id="links-section">
-                <div class="text-center mb-8">
-                    <img id="main-photo" class="w-28 h-28 object-cover rounded-full mx-auto mb-4 border-4 border-green-600 profile-image-enter" src="">
-                    <h1 id="main-name" class="text-4xl font-bold text-green-400 text-reveal"></h1>
-                    <p id="main-title" class="text-lg text-gray-400 mt-1 text-reveal"></p>
-                </div>
-                <div class="mb-10 text-center text-reveal">
-                    <h2 class="text-xl font-bold mb-3 border-b border-gray-700 pb-2">Biography</h2>
-                    <p id="main-bio" class="text-gray-300 italic"></p>
-                </div>
-                <div>
-                    <h2 class="text-xl font-bold mb-4 text-center border-b border-gray-700 pb-2">Listen & Connect</h2>
-                    <div id="main-links" class="space-y-4"></div>
-                </div>
-            </div>
-            <div id="card-section" class="hidden">
-                <div class="bg-white p-6 rounded-xl qr-card-shadow text-gray-800">
-                    <div class="text-center mb-6">
-                        <h2 class="text-2xl font-bold">Digital Card</h2>
-                        <p class="text-sm text-gray-500">Scan to view portfolio</p>
-                    </div>
-                    <div class="atm-card mx-auto">
-                        <div class="flex flex-col items-center justify-center h-full w-1/2">
-                            <img id="card-photo" class="w-28 h-28 object-cover rounded-full mb-2 border-2 border-green-400" src="">
-                            <h3 id="card-name" class="artist-name-on-card"></h3>
-                        </div>
-                        <div class="flex items-center justify-center h-full w-1/2">
-                            <div id="qrcode" class="p-2 bg-white rounded-lg border"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="text-center mt-6">
-                    <button onclick="window.print()" class="px-6 py-3 rounded-full bg-blue-600 hover:bg-blue-700 font-semibold link-button"><i class="fas fa-print mr-2"></i> Print</button>
-                </div>
-            </div>
+            <h1 class="text-5xl font-extrabold mb-2 text-reveal gradient-text">CADEAM</h1>
+            <p class="text-xl text-gray-400 text-reveal">Music Artist, song writer</p>
         </div>
 
-        <div id="editor-view" class="hidden bg-gray-800 p-8 rounded-xl qr-card-shadow">
-            <button onclick="showList()" class="mb-6 px-3 py-1 rounded-full bg-gray-700 hover:bg-gray-600"><i class="fas fa-arrow-left mr-1"></i> Back</button>
-            <div class="mb-6 p-4 bg-gray-900 rounded-xl border border-green-600/50">
-                <label class="block text-sm font-medium mb-2 text-green-400">⚠️ Public URL (REQUIRED for QR Code to work)</label>
-                <input type="url" id="base-url" class="w-full rounded-md p-3 bg-gray-700 text-white" placeholder="https://cliffkeys.github.io" onchange="saveBaseUrl()">
-                <p class="text-xs text-gray-400 mt-2">
-                    Enter your full GitHub Pages URL. Example: <code class="text-green-400">https://cliffkeys.github.io</code><br>
-                    Without this, QR codes won't work when scanned from other devices!
-                </p>
+        <!-- Biography -->
+        <div class="mb-10 text-center bio-section">
+            <h2 class="text-2xl font-bold mb-4 text-green-400 border-b-2 border-green-600 inline-block pb-2 section-header">Biography</h2>
+            <p class="text-gray-300 leading-relaxed italic max-w-2xl mx-auto mt-4">
+                Cadeam is a rising music artist known for blending emotion, rhythm, and raw storytelling into every track. With a unique sound that cuts across genres, Cadeam brings authenticity and passion to every performance. From early beginnings to a growing fanbase, Cadeam continues to push creative boundaries and connect with listeners around the world.
+            </p>
+        </div>
+
+        <!-- Social Links -->
+        <div>
+            <h2 class="text-2xl font-bold mb-6 text-center text-green-400 section-header">Listen & Connect</h2>
+            <div class="space-y-4 max-w-2xl mx-auto">
+                <a href="https://open.spotify.com/artist/5OS4GkG0tx2UtAOVZy1a7Y?si=nD4L7R8YQyK5c_gaj2KfTA" target="_blank" class="link-button link-item flex items-center justify-between p-4 bg-green-600 hover:bg-green-700 rounded-lg text-lg font-bold text-white">
+                    <span><i class="fab fa-spotify mr-4 text-2xl icon-spin"></i> Spotify</span>
+                    <i class="fas fa-chevron-right arrow-slide"></i>
+                </a>
+
+                <a href="https://music.apple.com/ng/artist/cadeam/1749392029" target="_blank" class="link-button link-item flex items-center justify-between p-4 bg-gray-700 hover:bg-gray-600 rounded-lg text-lg font-bold text-white">
+                    <span><i class="fab fa-apple mr-4 text-2xl icon-spin"></i> Apple Music</span>
+                    <i class="fas fa-chevron-right arrow-slide"></i>
+                </a>
+
+                <a href="https://audiomack.com/cadeam_" target="_blank" class="link-button link-item flex items-center justify-between p-4 bg-orange-500 hover:bg-orange-600 rounded-lg text-lg font-bold text-white">
+                    <span><i class="fas fa-headphones mr-4 text-2xl icon-spin"></i> Audiomack</span>
+                    <i class="fas fa-chevron-right arrow-slide"></i>
+                </a>
+
+                <a href="https://www.boomplay.com/share/artist/91441617?srModel=COPYLINK&srList=IOS" target="_blank" class="link-button link-item flex items-center justify-between p-4 bg-purple-600 hover:bg-purple-700 rounded-lg text-lg font-bold text-white">
+                    <span><i class="fas fa-music mr-4 text-2xl icon-spin"></i> Boomplay</span>
+                    <i class="fas fa-chevron-right arrow-slide"></i>
+                </a>
+
+                <a href="https://youtube.com/@iamcadeam?si=TgRXhF6igRud4Ei6" target="_blank" class="link-button link-item flex items-center justify-between p-4 bg-red-600 hover:bg-red-700 rounded-lg text-lg font-bold text-white">
+                    <span><i class="fab fa-youtube mr-4 text-2xl icon-spin"></i> YouTube</span>
+                    <i class="fas fa-chevron-right arrow-slide"></i>
+                </a>
+
+                <a href="https://www.instagram.com/cadeam_?igsh=MW4xNWJueDFnNHZpcA%3D%3D&utm_source=qr" target="_blank" class="link-button link-item flex items-center justify-between p-4 bg-pink-600 hover:bg-pink-700 rounded-lg text-lg font-bold text-white">
+                    <span><i class="fab fa-instagram mr-4 text-2xl icon-spin"></i> Instagram</span>
+                    <i class="fas fa-chevron-right arrow-slide"></i>
+                </a>
+
+                <a href="https://www.facebook.com/share/1Cj98seHKH/?mibextid=wwXIfr" target="_blank" class="link-button link-item flex items-center justify-between p-4 bg-blue-700 hover:bg-blue-800 rounded-lg text-lg font-bold text-white">
+                    <span><i class="fab fa-facebook mr-4 text-2xl icon-spin"></i> Facebook</span>
+                    <i class="fas fa-chevron-right arrow-slide"></i>
+                </a>
+
+                <a href="https://snapchat.com/t/BKCSOgS1" target="_blank" class="link-button link-item flex items-center justify-between p-4 bg-yellow-400 hover:bg-yellow-500 rounded-lg text-lg font-bold text-gray-900">
+                    <span><i class="fab fa-snapchat mr-4 text-2xl icon-spin"></i> Snapchat</span>
+                    <i class="fas fa-chevron-right arrow-slide"></i>
+                </a>
+
+                <a href="https://www.tiktok.com/@cadeam_?_t=ZS-90jxlFgCY7u&_r=1" target="_blank" class="link-button link-item flex items-center justify-between p-4 bg-black hover:bg-gray-900 rounded-lg text-lg font-bold text-white">
+                    <span><i class="fab fa-tiktok mr-4 text-2xl icon-spin"></i> TikTok</span>
+                    <i class="fas fa-chevron-right arrow-slide"></i>
+                </a>
+
+                <a href="https://music.youtube.com/channel/UCLbRIEXnZxZWx-evv8hEWng?si=_CUENNESf5Rp50VU" target="_blank" class="link-button link-item flex items-center justify-between p-4 bg-red-500 hover:bg-red-600 rounded-lg text-lg font-bold text-white">
+                    <span><i class="fab fa-youtube mr-4 text-2xl icon-spin"></i> YouTube Music</span>
+                    <i class="fas fa-chevron-right arrow-slide"></i>
+                </a>
             </div>
-            <h2 id="editor-title" class="text-3xl font-bold mb-8 text-green-400">Create Artist</h2>
-            <div id="msg" class="hidden p-4 rounded-md mb-6"></div>
-            <form id="form" class="space-y-6">
-                <input type="hidden" id="edit-id">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Artist Name</label>
-                        <input type="text" id="name" required class="w-full rounded-md p-3 bg-gray-700 text-white">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Title/Tagline</label>
-                        <input type="text" id="title" class="w-full rounded-md p-3 bg-gray-700 text-white">
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-2">Profile Image</label>
-                    <div class="flex items-center space-x-4">
-                        <img id="preview" src="https://placehold.co/100x100/374151/ffffff?text=NO" class="w-24 h-24 object-cover rounded-full border-2 border-green-600">
-                        <input type="file" id="img" accept="image/*" class="text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:bg-green-600 file:text-white">
-                        <button type="button" onclick="clearImg()" class="text-red-400"><i class="fas fa-trash-alt"></i></button>
-                    </div>
-                    <input type="hidden" id="img-data">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium mb-1">Biography</label>
-                    <textarea id="bio" rows="4" required class="w-full rounded-md p-3 bg-gray-700 text-white"></textarea>
-                </div>
-                <div>
-                    <h3 class="text-xl font-bold mb-3 border-b border-gray-700 pb-2">Links</h3>
-                    <div id="links-container" class="space-y-4 p-4 bg-gray-700 rounded-lg"></div>
-                    <button type="button" onclick="addLink()" class="mt-4 px-4 py-2 bg-green-600 hover:bg-green-700 rounded-md font-semibold link-button"><i class="fas fa-plus mr-1"></i> Add Link</button>
-                </div>
-                <div class="flex justify-between">
-                    <button type="submit" class="px-6 py-3 bg-green-600 hover:bg-green-700 rounded-lg font-bold link-button"><i class="fas fa-save mr-2"></i> Save</button>
-                    <button type="button" onclick="deleteArtist()" id="del-btn" class="hidden px-6 py-3 bg-red-600 hover:bg-red-700 rounded-lg font-bold link-button"><i class="fas fa-trash-alt mr-2"></i> Delete</button>
-                </div>
-            </form>
+        </div>
+
+        <!-- Footer -->
+        <div class="mt-12 text-center text-gray-500 text-sm footer-text">
+            <p>© 2025 CADEAM. All rights reserved.</p>
         </div>
     </div>
-
-    <script>
-        let data = {};
-        let currentId = null;
-        let qr = null;
-        const KEY = 'artistData';
-        const URL_KEY = 'baseUrl';
-        const DEFAULT = {
-            id: 'default',
-            name: "CADEAM",
-            title: "Music Artist, Storyteller",
-            bio: "Cadeam is a rising music artist known for blending emotion, rhythm, and raw storytelling into every track. With a unique sound that cuts across genres, Cadeam brings authenticity and passion to every performance. From early beginnings to a growing fanbase, Cadeam continues to push creative boundaries and connect with listeners around the world.",
-            image: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNTAiIGhlaWdodD0iMTUwIj48cmVjdCB3aWR0aD0iMTUwIiBoZWlnaHQ9IjE1MCIgZmlsbD0iIzcxN0ExRCIvPjx0ZXh0IHg9Ijc1IiB5PSI3NSIgZm9udC1zaXplPSIyNCIgZmlsbD0iI2ZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZG9taW5hbnQtYmFzZWxpbmU9ImNlbnRyYWwiPkNBREVBTTwvdGV4dD48L3N2Zz4=",
-            links: [
-                { platform: 'Spotify', url: 'https://open.spotify.com/artist/5OS4GkG0tx2UtAOVZy1a7Y?si=nD4L7R8YQyK5c_gaj2KfTA', icon: 'fab fa-spotify', color: 'bg-green-600' },
-                { platform: 'Apple Music', url: 'https://music.apple.com/ng/artist/cadeam/1749392029', icon: 'fab fa-apple', color: 'bg-gray-700' },
-                { platform: 'Audiomack', url: 'https://audiomack.com/cadeam_', icon: 'fas fa-headphones', color: 'bg-orange-500' },
-                { platform: 'Boomplay', url: 'https://www.boomplay.com/share/artist/91441617?srModel=COPYLINK&srList=IOS', icon: 'fas fa-music', color: 'bg-purple-600' },
-                { platform: 'YouTube', url: 'https://youtube.com/@iamcadeam?si=TgRXhF6igRud4Ei6', icon: 'fab fa-youtube', color: 'bg-red-600' },
-                { platform: 'Instagram', url: 'https://www.instagram.com/cadeam_?igsh=MW4xNWJueDFnNHZpcA%3D%3D&utm_source=qr', icon: 'fab fa-instagram', color: 'bg-pink-600' },
-                { platform: 'Facebook', url: 'https://www.facebook.com/share/1Cj98seHKH/?mibextid=wwXIfr', icon: 'fab fa-facebook', color: 'bg-blue-700' },
-                { platform: 'Snapchat', url: 'https://snapchat.com/t/BKCSOgS1', icon: 'fab fa-snapchat', color: 'bg-yellow-400' },
-                { platform: 'TikTok', url: 'https://www.tiktok.com/@cadeam_?_t=ZS-90jxlFgCY7u&_r=1', icon: 'fab fa-tiktok', color: 'bg-black' },
-                { platform: 'YouTube Music', url: 'https://music.youtube.com/channel/UCLbRIEXnZxZWx-evv8hEWng?si=_CUENNESf5Rp50VU', icon: 'fab fa-youtube', color: 'bg-red-500' },
-            ],
-            timestamp: Date.now()
-        };
-
-        function load() {
-            const saved = localStorage.getItem(KEY);
-            if (saved) {
-                data = JSON.parse(saved);
-            } else {
-                data = {};
-                data[DEFAULT.id] = DEFAULT;
-                save(); // Save the default to localStorage
-            }
-        }
-
-        function save() {
-            localStorage.setItem(KEY, JSON.stringify(data));
-        }
-
-        function loadBaseUrl() {
-            const url = localStorage.getItem(URL_KEY) || '';
-            document.getElementById('base-url').value = url;
-            return url;
-        }
-
-        function saveBaseUrl() {
-            const url = document.getElementById('base-url').value.trim().replace(/\/+$/, '');
-            if (!url) {
-                showMsg("Please enter a valid URL!", "error");
-                return;
-            }
-            localStorage.setItem(URL_KEY, url);
-            showMsg("✓ URL saved! QR codes will now work", "success");
-            // Refresh QR code if we're viewing a card
-            if (currentId && !document.getElementById('card-section').classList.contains('hidden')) {
-                initQR(currentId);
-            }
-        }
-
-        function isAdmin() {
-            return new URLSearchParams(window.location.search).get('admin') === 'true';
-        }
-
-        function showList() {
-            hideAll();
-            document.getElementById('list-view').classList.remove('hidden');
-            if (isAdmin()) document.getElementById('nav-bar').classList.remove('hidden');
-            renderList();
-        }
-
-        function showPortfolio(artist) {
-            hideAll();
-            document.getElementById('portfolio-view').classList.remove('hidden');
-            if (isAdmin()) {
-                document.getElementById('nav-bar').classList.remove('hidden');
-                document.getElementById('back-btn').classList.remove('hidden');
-            }
-            renderPortfolio(artist);
-            showLinks();
-        }
-
-        function showEditor(artist) {
-            if (!isAdmin()) return;
-            hideAll();
-            document.getElementById('editor-view').classList.remove('hidden');
-            document.getElementById('nav-bar').classList.remove('hidden');
-            document.getElementById('form').reset();
-            document.getElementById('links-container').innerHTML = '';
-            loadBaseUrl();
-            
-            if (artist) {
-                currentId = artist.id;
-                document.getElementById('editor-title').textContent = `Edit: ${artist.name}`;
-                document.getElementById('edit-id').value = artist.id;
-                document.getElementById('name').value = artist.name;
-                document.getElementById('title').value = artist.title || '';
-                document.getElementById('bio').value = artist.bio;
-                document.getElementById('img-data').value = artist.image || '';
-                document.getElementById('preview').src = artist.image || 'https://placehold.co/100x100/374151/ffffff?text=NO';
-                document.getElementById('del-btn').classList.remove('hidden');
-                (artist.links || []).forEach(l => addLink(l.platform, l.url));
-            } else {
-                currentId = null;
-                document.getElementById('editor-title').textContent = 'Create Artist';
-                document.getElementById('del-btn').classList.add('hidden');
-                addLink();
-            }
-        }
-
-        function hideAll() {
-            ['list-view', 'portfolio-view', 'editor-view', 'nav-bar', 'back-btn'].forEach(id => {
-                document.getElementById(id).classList.add('hidden');
-            });
-        }
-
-        function showLinks() {
-            document.getElementById('links-section').classList.remove('hidden');
-            document.getElementById('card-section').classList.add('hidden');
-            document.getElementById('links-tab').className = 'px-6 py-2 rounded-full bg-green-600 font-semibold link-button';
-            document.getElementById('card-tab').className = 'px-6 py-2 rounded-full bg-gray-700 font-semibold link-button';
-        }
-
-        function showCard() {
-            document.getElementById('links-section').classList.add('hidden');
-            document.getElementById('card-section').classList.remove('hidden');
-            document.getElementById('card-tab').className = 'px-6 py-2 rounded-full bg-green-600 font-semibold link-button';
-            document.getElementById('links-tab').className = 'px-6 py-2 rounded-full bg-gray-700 font-semibold link-button';
-            initQR(currentId);
-        }
-
-        function renderList() {
-            const container = document.getElementById('artist-list');
-            const ids = Object.keys(data);
-            if (!ids.length) {
-                container.innerHTML = '<p class="text-center text-gray-400 p-8">No artists. Click "New" to add one!</p>';
-                return;
-            }
-            ids.sort((a, b) => data[b].timestamp - data[a].timestamp);
-            container.innerHTML = ids.map(id => {
-                const a = data[id];
-                return `<div class="flex items-center justify-between p-4 bg-gray-700 rounded-lg mb-4">
-                    <div class="flex items-center space-x-4">
-                        <img src="${a.image || 'https://placehold.co/50'}" class="w-12 h-12 object-cover rounded-full border-2 border-green-500">
-                        <div>
-                            <p class="font-semibold">${a.name}</p>
-                            <p class="text-sm text-gray-400">${a.title || ''}</p>
-                        </div>
-                    </div>
-                    <div class="space-x-2">
-                        <button onclick='showPortfolio(${JSON.stringify(a).replace(/'/g, "&#39;")})' class="px-3 py-1 text-sm rounded-full bg-green-600 hover:bg-green-700 link-button"><i class="fas fa-eye"></i> View</button>
-                        <button onclick='showEditor(${JSON.stringify(a).replace(/'/g, "&#39;")})' class="px-3 py-1 text-sm rounded-full bg-blue-600 hover:bg-blue-700 link-button"><i class="fas fa-edit"></i> Edit</button>
-                    </div>
-                </div>`;
-            }).join('');
-        }
-
-        function renderPortfolio(artist) {
-            currentId = artist.id;
-            document.getElementById('main-photo').src = artist.image || 'https://placehold.co/150';
-            document.getElementById('main-name').textContent = artist.name;
-            document.getElementById('main-title').textContent = artist.title || '';
-            document.getElementById('main-bio').textContent = artist.bio;
-            document.getElementById('card-photo').src = artist.image || 'https://placehold.co/150';
-            document.getElementById('card-name').textContent = artist.name;
-            document.getElementById('main-links').innerHTML = (artist.links || []).map((l, index) => 
-                `<a href="${l.url}" target="_blank" class="link-button link-item flex items-center justify-between p-4 ${l.color} rounded-lg text-lg font-bold">
-                    <span><i class="${l.icon} mr-4"></i> ${l.platform}</span>
-                    <i class="fas fa-chevron-right"></i>
-                </a>`
-            ).join('');
-        }
-
-        function addLink(platform = '', url = '') {
-            const div = document.createElement('div');
-            div.className = 'flex space-x-2';
-            div.innerHTML = `
-                <input type="text" value="${platform}" placeholder="Platform" class="flex-1 rounded-md p-2 bg-gray-600 text-white link-plat">
-                <input type="url" value="${url}" placeholder="URL" class="flex-2 w-full rounded-md p-2 bg-gray-600 text-white link-url">
-                <button type="button" onclick="this.parentNode.remove()" class="px-3 py-1 bg-red-500 rounded-md text-white"><i class="fas fa-minus"></i></button>
-            `;
-            document.getElementById('links-container').appendChild(div);
-        }
-
-        function resize(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = e => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        let w = img.width, h = img.height;
-                        const max = 300;
-                        if (w > h && w > max) { h *= max / w; w = max; }
-                        else if (h > max) { w *= max / h; h = max; }
-                        canvas.width = w;
-                        canvas.height = h;
-                        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                        resolve(canvas.toDataURL('image/jpeg', 0.7));
-                    };
-                    img.onerror = reject;
-                    img.src = e.target.result;
-                };
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            });
-        }
-
-        function clearImg() {
-            document.getElementById('img').value = '';
-            document.getElementById('img-data').value = '';
-            document.getElementById('preview').src = 'https://placehold.co/100x100/374151/ffffff?text=NO';
-        }
-
-        function showMsg(msg, type = 'success') {
-            const box = document.getElementById('msg');
-            box.textContent = msg;
-            box.className = `p-4 rounded-md mb-6 ${type === 'success' ? 'bg-green-900/50 border border-green-600 text-green-300' : 'bg-red-900/50 border border-red-600 text-red-300'}`;
-            box.classList.remove('hidden');
-            setTimeout(() => box.classList.add('hidden'), 3000);
-        }
-
-        function deleteArtist() {
-            if (!currentId || !confirm('Delete? Cannot undo.')) return;
-            delete data[currentId];
-            save();
-            showList();
-        }
-
-        function initQR(id) {
-            const canvas = document.getElementById('qrcode');
-            canvas.innerHTML = '';
-            
-            // Get the base URL from settings
-            let base = loadBaseUrl().trim();
-            
-            // If no base URL is set, show warning
-            if (!base) {
-                canvas.innerHTML = '<div class="text-center p-4 text-red-600 text-sm">⚠️ Set Public URL in Admin Settings</div>';
-                console.warn('QR Code needs Public Domain URL. Go to Admin > Global Deployment Settings');
-                return;
-            }
-            
-            // Ensure URL ends with /
-            if (!base.endsWith('/')) base += '/';
-            
-            // Create the full URL with hash for specific artist
-            const url = `${base}#${id}`;
-            
-            console.log('QR Code URL:', url);
-            qr = new QRCode(canvas, { 
-                text: url, 
-                width: 130, 
-                height: 130,
-                colorDark: '#000000',
-                colorLight: '#ffffff'
-            });
-        }
-
-        function init() {
-            load();
-            const hash = window.location.hash.substring(1);
-            const ids = Object.keys(data);
-            let target = null;
-            
-            // Find the target artist to display
-            if (hash && data[hash]) {
-                // If there's a hash in URL and that artist exists, show them
-                target = data[hash];
-            } else if (ids.length) {
-                // Otherwise show the most recent artist
-                ids.sort((a, b) => data[b].timestamp - data[a].timestamp);
-                target = data[ids[0]];
-            }
-
-            // If we have a target artist, display their portfolio or the list
-            if (target) {
-                if (isAdmin()) {
-                    showList();
-                } else {
-                    showPortfolio(target);
-                }
-            }
-        }
-
-        document.getElementById('img').addEventListener('change', async e => {
-            const file = e.target.files[0];
-            if (file) {
-                try {
-                    const b64 = await resize(file);
-                    document.getElementById('img-data').value = b64;
-                    document.getElementById('preview').src = b64;
-                    showMsg("Image ready");
-                } catch {
-                    showMsg("Image error", "error");
-                }
-            }
-        });
-
-        document.getElementById('form').addEventListener('submit', e => {
-            e.preventDefault();
-            const id = document.getElementById('edit-id').value || crypto.randomUUID();
-            const links = [];
-            document.querySelectorAll('#links-container > div').forEach(div => {
-                const p = div.querySelector('.link-plat').value.trim();
-                const u = div.querySelector('.link-url').value.trim();
-                if (!p || !u) return;
-                let icon = 'fas fa-link', color = 'bg-gray-700';
-                const lp = p.toLowerCase();
-                if (lp.includes('spotify')) { icon = 'fab fa-spotify'; color = 'bg-green-600'; }
-                else if (lp.includes('apple')) { icon = 'fab fa-apple'; color = 'bg-gray-700'; }
-                else if (lp.includes('audiomack')) { icon = 'fas fa-headphones'; color = 'bg-orange-500'; }
-                else if (lp.includes('boomplay')) { icon = 'fas fa-music'; color = 'bg-purple-600'; }
-                else if (lp.includes('youtube')) { icon = 'fab fa-youtube'; color = 'bg-red-600'; }
-                else if (lp.includes('instagram')) { icon = 'fab fa-instagram'; color = 'bg-pink-600'; }
-                else if (lp.includes('tiktok')) { icon = 'fab fa-tiktok'; color = 'bg-black'; }
-                else if (lp.includes('facebook')) { icon = 'fab fa-facebook'; color = 'bg-blue-700'; }
-                else if (lp.includes('snapchat')) { icon = 'fab fa-snapchat', color = 'bg-yellow-400'; }
-                links.push({ platform: p, url: u, icon, color });
-            });
-
-            data[id] = {
-                id,
-                name: document.getElementById('name').value.trim(),
-                title: document.getElementById('title').value.trim(),
-                bio: document.getElementById('bio').value.trim(),
-                image: document.getElementById('img-data').value,
-                links,
-                timestamp: Date.now()
-            };
-            save();
-            showMsg("Saved!");
-            setTimeout(() => showList(), 1500);
-        });
-
-        window.addEventListener('load', init);
-        window.addEventListener('hashchange', init);
-    </script>
 </body>
 </html>
